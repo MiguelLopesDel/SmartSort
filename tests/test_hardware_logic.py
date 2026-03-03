@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from smartsort.core.engine import FileProcessor
 
@@ -40,7 +40,7 @@ class TestHardwareLogicDecision(unittest.TestCase):
 
         FileProcessor(config)
 
-        # O pipeline deve ter sido chamado com device=0
+
         mock_pipe.assert_called()
         found_cuda = False
         for call in mock_pipe.call_args_list:
@@ -55,11 +55,39 @@ class TestHardwareLogicDecision(unittest.TestCase):
         config["acceleration"]["provider"] = "openvino"
         config["acceleration"]["device"] = "gpu"
 
-        # Mock do import local do optimum
-        with patch("builtins.__import__", side_effect=ImportError):
+
+        original_import = __import__
+
+        def side_effect(name, *args, **kwargs):
+            if "optimum.intel.openvino" in name:
+                raise ImportError
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=side_effect):
             FileProcessor(config)
-            # Como falhou o import (pelo side_effect), deve ter chamado o pipeline padrão
+
             self.assertTrue(mock_pipe.called)
+
+    @patch("smartsort.core.engine.pipeline")
+    @patch("os.path.exists")
+    @patch("os.makedirs")
+    def test_openvino_cache_loading(self, mock_makedirs, mock_exists, mock_pipe):
+        """Verifica se o sistema tenta carregar do cache se ele existir."""
+        config = self.config.copy()
+        config["acceleration"]["provider"] = "openvino"
+        
+
+        mock_exists.return_value = True
+        
+
+        mock_ov_class = MagicMock()
+        with patch.dict("sys.modules", {"optimum.intel.openvino": mock_ov_class}):
+            from optimum.intel.openvino import OVModelForSequenceClassification
+            with patch.object(OVModelForSequenceClassification, "from_pretrained") as mock_from:
+                FileProcessor(config)
+                mock_from.assert_called()
+                call_path = mock_from.call_args[0][0]
+                self.assertIn("ov_cache", call_path)
 
     @patch("smartsort.core.engine.pipeline")
     def test_cpu_fallback_logic(self, mock_pipe):
@@ -69,7 +97,7 @@ class TestHardwareLogicDecision(unittest.TestCase):
 
         FileProcessor(config)
 
-        # Deve chamar o pipeline padrão do transformers
+
         self.assertTrue(mock_pipe.called)
 
 

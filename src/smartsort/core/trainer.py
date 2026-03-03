@@ -1,50 +1,36 @@
+import os
+
 import joblib
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 
-dados_treino = [
-    "fatura de eletricidade mensalidade conta energia luz",
-    "recibo do supermercado compras alimentação",
-    "pagamento do iva impostos",
-    "declaração de IRS finanças",
-    "extrato bancário despesas",
-    "relatório de contas anuais da empresa lucros",
-    "curriculum vitae experiência profissional",
-    "ata da reunião de direção",
-    "projeto de arquitetura especificações",
-    "fotos da viagem férias praia familia",
-    "exames médicos saúde clinica",
-    "receita médica farmácia",
-]
-
-categorias_alvo = [
-    "Financas",
-    "Financas",
-    "Financas",
-    "Financas",
-    "Financas",
-    "Trabalho",
-    "Trabalho",
-    "Trabalho",
-    "Trabalho",
-    "Pessoal",
-    "Saude",
-    "Saude",
-]
+from smartsort.utils.logger import logger
 
 
-def treinar():
-    print("A treinar o modelo local de Machine Learning...")
+def treinar_modelo_local(dados_treino, caminho_modelo="models/modelo_classificador.joblib"):
+    """
+    Treina um modelo simples de ML (Random Forest) para classificação local.
+    dados_treino: Lista de tuplos (texto, categoria)
+    """
+    if not dados_treino:
+        logger.warning("Nenhum dado de treino fornecido. A ignorar treino.")
+        return
 
-    modelo = make_pipeline(TfidfVectorizer(), MultinomialNB())
+    logger.info("A treinar o modelo local de Machine Learning...")
 
-    modelo.fit(dados_treino, categorias_alvo)
+    textos = [d[0] for d in dados_treino]
+    categorias = [d[1] for d in dados_treino]
 
-    caminho_modelo = "models/modelo_classificador.joblib"
-    joblib.dump(modelo, caminho_modelo)
-    print(f"Modelo treinado e guardado em: {caminho_modelo}")
+    pipeline = Pipeline(
+        [
+            ("tfidf", TfidfVectorizer()),
+            ("clf", RandomForestClassifier(n_estimators=100)),
+        ]
+    )
 
+    pipeline.fit(textos, categorias)
 
-if __name__ == "__main__":
-    treinar()
+    os.makedirs(os.path.dirname(caminho_modelo), exist_ok=True)
+    joblib.dump(pipeline, caminho_modelo)
+    logger.info(f"Modelo treinado e guardado em: [green]{caminho_modelo}[/green]")

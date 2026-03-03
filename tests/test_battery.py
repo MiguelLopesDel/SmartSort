@@ -58,7 +58,7 @@ class TestBatteryOptimization(unittest.TestCase):
         processor = FileProcessor(self.config)
         result = processor.classify_file("teste.pdf", "teste.pdf")
 
-        # O retorno pode ser tupla (cat, conf) ou só cat. Pega o primeiro.
+
         category = result[0] if isinstance(result, (tuple, list)) else result
         self.assertEqual(category, "Documentos")
 

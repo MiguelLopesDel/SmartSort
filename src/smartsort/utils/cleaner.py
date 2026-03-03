@@ -3,25 +3,29 @@ import os
 import sys
 import tokenize
 
+from smartsort.utils.logger import logger
+
 
 def remove_python_comments(filepath):
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             source = f.read()
     except Exception as e:
-        print(f"Erro ao ler {filepath}: {e}")
+        logger.error(f"Erro ao ler {filepath}: {e}")
         return
 
     comments = []
     try:
+
         tokens = tokenize.tokenize(io.BytesIO(source.encode("utf-8")).readline)
         for tok in tokens:
             if tok.type == tokenize.COMMENT:
                 comments.append((tok.start, tok.end))
-    except tokenize.TokenError:
+    except (tokenize.TokenError, IndentationError):
+
         pass
     except Exception as e:
-        print(f"Erro ao processar tokens de Python {filepath}: {e}")
+        logger.error(f"Erro ao processar tokens de Python {filepath}: {e}")
         return
 
     if not comments:
@@ -29,31 +33,41 @@ def remove_python_comments(filepath):
 
     lines = source.splitlines(keepends=True)
 
+
     for start, end in reversed(comments):
-        start_row, start_col = start
-        end_row, end_col = end
+        start_row, _ = start
+        end_row, _ = end
 
-        start_idx = start_row - 1
-        end_idx = end_row - 1
 
-        if start_idx == end_idx:
-            line = lines[start_idx]
-            before = line[:start_col]
-            after = line[end_col:]
 
-            if after == "\n" or after == "\r\n" or after == "":
-                before = before.rstrip(" \t")
 
-            lines[start_idx] = before + after
+
+        
+
+        s_row, s_col = start
+        e_row, e_col = end
+        
+        line_idx = s_row - 1
+        line = lines[line_idx]
+        
+
+        if line[:s_col].strip() == "":
+
+
+            lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
+
+        else:
+
+            lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
 
     final_content = "".join(lines)
 
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(final_content)
-        print(f"Comentários removidos (Python): {filepath}")
+        logger.info(f"Comentários removidos (Python): [blue]{filepath}[/blue]")
     except Exception as e:
-        print(f"Erro ao escrever Python {filepath}: {e}")
+        logger.error(f"Erro ao escrever Python {filepath}: {e}")
 
 
 def remove_shell_comments(filepath):
@@ -61,7 +75,7 @@ def remove_shell_comments(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
-        print(f"Erro ao ler {filepath}: {e}")
+        logger.error(f"Erro ao ler {filepath}: {e}")
         return
 
     result = []
@@ -98,6 +112,7 @@ def remove_shell_comments(filepath):
             i += 1
             continue
 
+
         if char == "#" and not in_single_quote and not in_double_quote:
             is_start_of_word = i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
             if is_start_of_word:
@@ -112,8 +127,10 @@ def remove_shell_comments(filepath):
                         i = newline_pos
                         continue
                 else:
+
                     modified = True
                     newline_pos = content.find("\n", i)
+
 
                     while len(result) > 0 and result[-1] in (" ", "\t"):
                         result.pop()
@@ -133,14 +150,14 @@ def remove_shell_comments(filepath):
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write("".join(result))
-        print(f"Comentários removidos (Shell): {filepath}")
+        logger.info(f"Comentários removidos (Shell): [blue]{filepath}[/blue]")
     except Exception as e:
-        print(f"Erro ao escrever Shell {filepath}: {e}")
+        logger.error(f"Erro ao escrever Shell {filepath}: {e}")
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Uso: python remover_comentarios.py <arquivo_ou_diretorio> [arquivo_ou_diretorio...]")
+        logger.warning("Uso: python -m smartsort.utils.cleaner <arquivo_ou_diretorio>")
         sys.exit(1)
 
     targets = sys.argv[1:]
@@ -150,8 +167,6 @@ def main():
                 remove_python_comments(target)
             elif target.endswith(".sh"):
                 remove_shell_comments(target)
-            else:
-                print(f"Ignorado (extensão não suportada): {target}")
         elif os.path.isdir(target):
             for root, _, files in os.walk(target):
                 for file in files:
