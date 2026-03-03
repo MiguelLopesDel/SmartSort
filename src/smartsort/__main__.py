@@ -23,12 +23,24 @@ class SmartSortHandler(FileSystemEventHandler):
             self.processor.process_file(event.src_path)
 
 
+DEFAULT_CONFIG = {
+    "directories_to_watch": [],
+    "destination_base_folder": "data/sorted",
+    "ai_classification": {"enabled": False},
+    "power_saving": {"enabled": True, "pause_ai_on_battery": True},
+    "fallback_rules": {},
+}
+
+
 def load_config(config_path="config/config.yaml"):
     try:
+        if not os.path.exists(config_path):
+            return DEFAULT_CONFIG
         with open(config_path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            cfg = yaml.safe_load(f)
+            return cfg if cfg else DEFAULT_CONFIG
     except Exception as e:
-        logger.error(f"Erro ao carregar o config.yaml: {e}")
+        logger.error(f"Erro ao carregar o {config_path}: {e}")
         return None
 
 
@@ -36,57 +48,59 @@ def main():
     config_path = "config/config.yaml"
     config = load_config(config_path)
 
-    if not config:
-        logger.critical("Configuração inicial inválida. A encerrar.")
-        sys.exit(1)
+    config_error_mode = False
+    if config is None:
+        logger.error("Falha na configuração inicial. Entrando em modo de espera/recuperação.")
+        config = DEFAULT_CONFIG
+        config_error_mode = True
 
     processor = FileProcessor(config)
 
-
-    processor.process_existing_files()
+    if not config_error_mode:
+        processor.process_existing_files()
 
     observer = Observer()
     handler = SmartSortHandler(processor)
 
-    directories = config.get("directories_to_watch", [])
-    if not directories:
-        logger.warning("Nenhum diretório para monitorizar configurado.")
-        return
+    def setup_observer(cfg):
+        observer.unschedule_all()
+        directories = cfg.get("directories_to_watch", [])
+        for directory in directories:
+            if os.path.exists(directory):
+                observer.schedule(handler, directory, recursive=False)
+                logger.info(f"A monitorizar: [yellow]{directory}[/yellow]")
+            else:
+                logger.warning(f"O diretório [red]{directory}[/red] não existe.")
 
-    for directory in directories:
-        if os.path.exists(directory):
-            observer.schedule(handler, directory, recursive=False)
-            logger.info(f"A monitorizar o diretório: [yellow]{directory}[/yellow]")
-        else:
-            logger.warning(f"O diretório [red]{directory}[/red] não existe.")
+    if not config_error_mode:
+        setup_observer(config)
 
     observer.start()
     logger.info("[bold green]SmartSort em execução. Pressione Ctrl+C para parar.[/bold green]")
 
     try:
-        last_mtime = os.path.getmtime(config_path)
+        last_mtime = 0
+        if os.path.exists(config_path):
+            last_mtime = os.path.getmtime(config_path)
+
         while True:
             time.sleep(5)
-
-
             try:
-                current_mtime = os.path.getmtime(config_path)
-                if current_mtime > last_mtime:
-                    logger.info("Alteração detetada em config.yaml. A recarregar definições...")
-                    new_config = load_config(config_path)
-                    if new_config:
-                        processor.config = new_config
-                        processor.power_manager.config = new_config
-
-                        last_mtime = current_mtime
-                        logger.info("Configuração atualizada com sucesso!")
-            except Exception as e:
-                logger.error(f"Erro ao recarregar configuração: {e}")
-
-
-            if processor.power_manager.is_on_battery():
-
-                pass
+                if os.path.exists(config_path):
+                    current_mtime = os.path.getmtime(config_path)
+                    if current_mtime > last_mtime or config_error_mode:
+                        new_config = load_config(config_path)
+                        if new_config:
+                            logger.info("Configuração atualizada/recuperada com sucesso!")
+                            processor.config = new_config
+                            processor.power_manager.config = new_config
+                            setup_observer(new_config)
+                            last_mtime = current_mtime
+                            config_error_mode = False
+            except Exception:
+                if not config_error_mode:
+                    logger.error("Arquivo de configuração ainda contém erros. Mantendo modo de espera.")
+                    config_error_mode = True
 
     except KeyboardInterrupt:
         observer.stop()
