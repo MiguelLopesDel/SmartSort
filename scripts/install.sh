@@ -163,49 +163,52 @@ gerar_recomendacoes() {
 
 
 instalar_dependencias() {
-    echo "Instalando dependências de sistema para $DISTRO..."
+    echo "Verificando dependências de sistema..."
     
+    # Verifica se pacotes essenciais já existem para pular o install pesado
+    if command -v tesseract &> /dev/null && command -v lspci &> /dev/null && command -v git &> /dev/null; then
+        echo "Dependências de sistema já encontradas. Pulando instalação de pacotes."
+        return 0
+    fi
+
+    echo "Instalando dependências de sistema para $DISTRO..."
     if [[ "$DISTRO" == "ubuntu" || "$DISTRO" == "debian" || "$DISTRO_LIKE" == *"ubuntu"* || "$DISTRO_LIKE" == *"debian"* ]]; then
-        echo "Executando apt-get..."
-        sudo apt-get update
+        # Só faz update se necessário
+        sudo apt-get update -y
         sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr tesseract-ocr-por pciutils mesa-utils
     elif [[ "$DISTRO" == "arch" || "$DISTRO_LIKE" == *"arch"* ]]; then
-        echo "Executando pacman..."
         sudo pacman -Sy --noconfirm --needed python python-pip git tesseract tesseract-data-por pciutils mesa-utils
     elif [[ "$DISTRO" == "fedora" || "$DISTRO_LIKE" == *"fedora"* ]]; then
-        echo "Executando dnf..."
         sudo dnf install -y python3 python3-pip git tesseract tesseract-langpack-por pciutils mesa-libGL-devel
-    else
-        echo -e "${VERMELHO}Distribuição não suportada automaticamente para instalação de pacotes.${NC}"
-        echo "Por favor, certifique-se de que os pacotes básicos estão instalados: python3, git, tesseract-ocr, pciutils"
     fi
 }
 
-
 configurar_python() {
-    echo "Configurando ambiente virtual Python..."
+    echo "Configurando ambiente Python..."
     if [ ! -d "venv" ]; then
         python3 -m venv venv
     fi
     source venv/bin/activate
     
-    # Configura TMPDIR local para evitar erro de cota no /tmp (comum no Arch)
     mkdir -p "$(pwd)/.tmp"
     export TMPDIR="$(pwd)/.tmp"
-    
-    echo "Instalando requisitos essenciais do Python..."
-    pip install --upgrade pip || { echo -e "${VERMELHO}Erro ao atualizar pip.${NC}"; exit 1; }
-    if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt || { echo -e "${VERMELHO}ERRO CRÍTICO: Falha ao instalar dependências essenciais. Verifique o espaço em disco.${NC}"; exit 1; }
-    fi
 
-    echo "Tentando instalar módulos de aceleração de hardware (opcional)..."
-    if [ -f "requirements-accel.txt" ]; then
-        # Tenta instalar um a um para não quebrar se um falhar
-        while IFS= read -r line || [ -n "$line" ]; do
-            echo "Instalando $line..."
-            pip install "$line" || echo -e "${AMARELO}Aviso: Não foi possível instalar $line. Aceleração para este módulo estará desativada.${NC}"
-        done < "requirements-accel.txt"
+    # Usa um arquivo de controle para não reinstalar pip toda vez
+    HASH_FILE=".tmp/req_hash"
+    CURRENT_HASH=$(cat requirements.txt requirements-accel.txt 2>/dev/null | md5sum)
+    OLD_HASH=$(cat "$HASH_FILE" 2>/dev/null)
+
+    if [ "$CURRENT_HASH" != "$OLD_HASH" ]; then
+        echo "Alteração detectada nos requisitos. Instalando dependências Python..."
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        
+        if [ -f "requirements-accel.txt" ]; then
+            pip install -r requirements-accel.txt || echo "Aviso: Falha em algumas dependências de aceleração."
+        fi
+        echo "$CURRENT_HASH" > "$HASH_FILE"
+    else
+        echo "Dependências Python já estão atualizadas."
     fi
 }
 
