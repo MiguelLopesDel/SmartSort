@@ -7,13 +7,15 @@ import joblib
 import pypdf
 import pytesseract
 from PIL import Image
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer
+from optimum.intel.openvino import OVModelForSequenceClassification
 from smartsort.utils.power import PowerManager
 
 
 class FileProcessor:
     def __init__(self, config):
         self.config = config
+        self.accel_config = config.get("acceleration", {"enabled": False})
         self.power_manager = PowerManager(config)
         self.destination_base = config.get("destination_base_folder", "data/sorted")
         self.ai_config = config.get("ai_classification", {})
@@ -25,6 +27,8 @@ class FileProcessor:
         mode = self.ai_config.get("mode")
         if self.ai_config.get("enabled", False):
             if mode == "local_ml":
+                # ... (manter lógica local_ml ...)
+
                 model_path = self.ai_config.get(
                     "local_ml_model_path", "models/modelo_classificador.joblib"
                 )
@@ -40,17 +44,37 @@ class FileProcessor:
                 model_name = self.ai_config.get(
                     "zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
                 )
-                print(
-                    f"A carregar o modelo Zero-Shot avançado ({model_name}). "
-                    "Isto pode demorar um pouco na primeira vez..."
-                )
-                try:
-                    self.zero_shot_classifier = pipeline(
-                        "zero-shot-classification", model=model_name
-                    )
-                    print("Modelo Zero-Shot carregado com sucesso!")
-                except Exception as e:
-                    print(f"Aviso: Falha ao carregar modelo Zero-Shot: {e}")
+                
+                if self.accel_config.get("enabled", False):
+                    # Se aceleração está ativa, carregar via OpenVINO
+                    device = self.accel_config.get("device", "auto").upper()
+                    if device == "AUTO": device = "CPU" # Fallback seguro
+                    
+                    print(f"A carregar o modelo Zero-Shot otimizado ({model_name}) para {device}...")
+                    try:
+                        # Carrega o modelo convertido via OpenVINO
+                        model = OVModelForSequenceClassification.from_pretrained(
+                            model_name, 
+                            export=True, # Converte o modelo da HuggingFace se não estiver em cache
+                            device=device,
+                            load_in_8bit=(self.accel_config.get("quantization") == "int8")
+                        )
+                        tokenizer = AutoTokenizer.from_pretrained(model_name)
+                        self.zero_shot_classifier = pipeline(
+                            "zero-shot-classification", model=model, tokenizer=tokenizer
+                        )
+                        print(f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!")
+                    except Exception as e:
+                        print(f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão...")
+                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                else:
+                    # Modo padrão sem aceleração extra
+                    print(f"A carregar o modelo Zero-Shot padrão ({model_name})...")
+                    try:
+                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                        print("Modelo Zero-Shot carregado com sucesso!")
+                    except Exception as e:
+                        print(f"Aviso: Falha ao carregar modelo Zero-Shot: {e}")
 
     def sanitize_category(self, category_name):
 

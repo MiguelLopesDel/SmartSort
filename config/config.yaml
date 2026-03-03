@@ -9,6 +9,12 @@ ai_classification:
   zero_shot_model: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli" # Modelo excelente para Zero-Shot multilingue (inclui PT)
   categorias_disponiveis: ["Financas", "Trabalho", "Pessoal", "Saude", "Educacao", "Projetos"]
 
+# Configurações de Aceleração de Hardware
+acceleration:
+  enabled: true
+  device: "auto"        # auto, gpu, cpu (gpu usará OpenVINO/iGPU se disponível)
+  quantization: "int8"  # int8 para máxima performance, fp16 para precisão original
+
 # Configurações de Economia de Energia (Otimização para Notebooks)
 power_saving:
   enabled: true
