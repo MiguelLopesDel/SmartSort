@@ -8,11 +8,13 @@ import pypdf
 import pytesseract
 from PIL import Image
 from transformers import pipeline
+from smartsort.utils.power import PowerManager
 
 
 class FileProcessor:
     def __init__(self, config):
         self.config = config
+        self.power_manager = PowerManager(config)
         self.destination_base = config.get("destination_base_folder", "data/sorted")
         self.ai_config = config.get("ai_classification", {})
         self.fallback_rules = config.get("fallback_rules", {})
@@ -184,6 +186,11 @@ class FileProcessor:
 
     def classify_file(self, file_path, filename):
         ext = filename.split(".")[-1].lower() if "." in filename else ""
+
+        # Verificação de Economia de Energia (Bateria)
+        if self.power_manager.should_use_fallback():
+            print(f"Modo Economia: Saltando IA pesada para {filename}.")
+            return self.fallback_rules.get(ext, "Outros")
 
         extracted_text = ""
         if ext == "pdf":

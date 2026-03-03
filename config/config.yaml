@@ -9,6 +9,13 @@ ai_classification:
   zero_shot_model: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli" # Modelo excelente para Zero-Shot multilingue (inclui PT)
   categorias_disponiveis: ["Financas", "Trabalho", "Pessoal", "Saude", "Educacao", "Projetos"]
 
+# Configurações de Economia de Energia (Otimização para Notebooks)
+power_saving:
+  enabled: true
+  pause_ai_on_battery: true      # Desativa IA pesada (mDeBERTa/OCR) na bateria (usa fallback simples)
+  throttle_interval_sec: 10      # Intervalo maior entre verificações quando na bateria
+  stop_below_percent: 20         # Para o processamento se a bateria estiver abaixo deste nível
+
 # Regras simples de fallback (usadas se a IA estiver desativada ou falhar)
 fallback_rules:
   pdf: "Documentos"

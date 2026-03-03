@@ -103,9 +103,22 @@ def main():
     )
 
     observer.start()
+    
+    # Gerenciador de bateria para o loop principal
+    from smartsort.utils.power import PowerManager
+    power_manager = PowerManager(config)
+
     try:
         while True:
-            time.sleep(1)
+            # Verifica se deve parar totalmente (bateria crítica)
+            if power_manager.should_stop_processing():
+                print("Interrompendo monitorização para poupar bateria crítica...")
+                time.sleep(60) # Dorme por 1 minuto antes de checar de novo
+                continue
+
+            # Ajusta o tempo de sleep (mais longo na bateria)
+            interval = power_manager.get_throttle_interval()
+            time.sleep(interval)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
