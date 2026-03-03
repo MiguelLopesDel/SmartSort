@@ -9,14 +9,22 @@ class FileHandler(FileSystemEventHandler):
     def __init__(self, config):
         self.processor = FileProcessor(config)
 
+    def is_temporary(self, path):
+        filename = os.path.basename(path)
+
+        temp_extensions = ('.part', '.crdownload', '.tmp', '.kate-swp', '.swp', '.swx')
+        if filename.startswith('.') or filename.endswith(temp_extensions) or filename.endswith('~'):
+            return True
+        return False
+
     def on_created(self, event):
-        # Apenas processar se for um ficheiro/pasta na RAIZ do diretório vigiado
-        # e não for um ficheiro temporário
+        if self.is_temporary(event.src_path):
+            return
+
         if not event.is_directory:
             print(f"Novo ficheiro detetado: {event.src_path}")
             self.processor.process_file(event.src_path)
         else:
-            # Se for uma pasta, processar a pasta como um bloco
             print(f"Nova pasta detetada: {event.src_path}")
             self.processor.process_file(event.src_path)
 
@@ -31,15 +39,15 @@ class ConfigHandler(FileSystemEventHandler):
             print("\\n--- Alteração detetada em config.yaml. A recarregar definições... ---")
             new_config = load_config(self.config_path)
             if new_config:
-                # Atualizar o processador com as novas definições
+
                 self.handler.processor.config = new_config
                 self.handler.processor.destination_base = new_config.get("destination_base_folder", "data/sorted")
 
-                # Atualizar pastas de observação
+
                 self.observer.unschedule_all()
                 setup_observers(self.observer, self.handler, new_config)
 
-                # Reaproveitar para monitorizar o próprio config.yaml
+
                 self.observer.schedule(self, path=os.path.dirname(self.config_path), recursive=False)
                 print("--- Configuração atualizada com sucesso! ---\\n")
 
@@ -72,10 +80,10 @@ def main():
     observer = Observer()
     handler = FileHandler(config)
 
-    # Inicializar observadores das pastas
+
     setup_observers(observer, handler, config)
 
-    # Adicionar observador para o próprio ficheiro de configuração (Hot Reload)
+
     config_watcher = ConfigHandler(observer, config_path, handler)
     observer.schedule(config_watcher, path=os.path.dirname(config_path), recursive=False)
 

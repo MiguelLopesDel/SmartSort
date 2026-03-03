@@ -88,10 +88,13 @@ class FileProcessor:
 
         filename = os.path.basename(file_path)
         
-        if filename.endswith(".crdownload") or filename.endswith(".part"):
+
+        ignored_extensions = ('.part', '.crdownload', '.tmp', '.kate-swp', '.swp', '.swx')
+        if filename.startswith('.') or filename.endswith(ignored_extensions) or filename.endswith('~'):
             return
 
-        time.sleep(1)
+
+        time.sleep(2)
         if not os.path.exists(file_path):
             return
 
