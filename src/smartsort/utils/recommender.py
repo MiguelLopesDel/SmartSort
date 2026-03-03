@@ -1,8 +1,7 @@
-import psutil
 import subprocess
-import os
-import json
-import logging
+
+import psutil
+
 
 class HardwareRecommender:
     def __init__(self, config=None):
@@ -14,7 +13,7 @@ class HardwareRecommender:
         try:
             output = subprocess.check_output("lspci -nn | grep -E -i '(VGA|3D)'", shell=True).decode()
             gpu_info = output.lower()
-            
+
             if "nvidia" in gpu_info:
                 return "nvidia", "cuda"
             elif "intel" in gpu_info:
@@ -25,7 +24,7 @@ class HardwareRecommender:
                 if "radeon rx" in gpu_info or "navi" in gpu_info:
                     return "amd_dedicated", "openvino"
                 return "amd_igpu", "openvino"
-        except:
+        except Exception:
             pass
         return "cpu_only", "cpu"
 
@@ -35,11 +34,11 @@ class HardwareRecommender:
         cpu_count = psutil.cpu_count(logical=False)
         battery = psutil.sensors_battery()
         gpu_type, provider = self.detect_gpu()
-        
+
         rec = {
             "acceleration": {"enabled": True, "provider": provider, "device": "gpu", "quantization": "int8"},
             "power_saving": {"enabled": False},
-            "ai_classification": {"enabled": True, "zero_shot_model": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"}
+            "ai_classification": {"enabled": True, "zero_shot_model": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"},
         }
 
         # Lógica de RAM e CPU (Subestimar vs Sobrecarregar)
@@ -63,12 +62,12 @@ class HardwareRecommender:
         elif gpu_type == "nvidia":
             rec["acceleration"]["provider"] = "cuda"
             rec["acceleration"]["device"] = "gpu"
-        
+
         # Ajuste de Notebook
         is_notebook = battery is not None
         if is_notebook:
             rec["power_saving"]["enabled"] = True
-            
+
         return rec, reason, is_notebook
 
     def print_formatted_recommendation(self):
@@ -77,19 +76,20 @@ class HardwareRecommender:
             return
 
         rec, reason, is_notebook = self.get_recommendation()
-        
-        print("\n" + "="*50)
+
+        print("\n" + "=" * 50)
         print("🔍 ANÁLISE DE HARDWARE SMART_SORT")
-        print("="*50)
+        print("=" * 50)
         print(f"Status: {reason}")
         if is_notebook:
             print("💻 Notebook detectado! Ativando modo de economia de bateria.")
-        
+
         print("\nConfigurações sugeridas:")
         print(f"  - Aceleração: {rec['acceleration']['provider']} ({rec['acceleration']['device']})")
         print(f"  - Precisão: {rec['acceleration']['quantization']}")
         print(f"  - IA Ativa: {'Sim' if rec['ai_classification']['enabled'] else 'Não'}")
-        print("="*50 + "\n")
+        print("=" * 50 + "\n")
+
 
 if __name__ == "__main__":
     recommender = HardwareRecommender()

@@ -6,9 +6,10 @@ import time
 import joblib
 import pypdf
 import pytesseract
-from PIL import Image
-from transformers import pipeline, AutoTokenizer
 from optimum.intel.openvino import OVModelForSequenceClassification
+from PIL import Image
+from transformers import AutoTokenizer, pipeline
+
 from smartsort.utils.power import PowerManager
 
 
@@ -44,52 +45,75 @@ class FileProcessor:
                 model_name = self.ai_config.get(
                     "zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
                 )
-                
+
                 if self.accel_config.get("enabled", False):
                     # Configuração de Aceleração
                     provider = self.accel_config.get("provider", "auto").lower()
                     device = self.accel_config.get("device", "auto").upper()
-                    
+
                     if provider == "cuda":
-                        print(f"A carregar o modelo Zero-Shot para GPU NVIDIA (CUDA)... ({model_name})")
+                        print(
+                            f"A carregar o modelo Zero-Shot para GPU NVIDIA (CUDA)... ({model_name})"
+                        )
                         try:
                             self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification", 
-                                model=model_name, 
-                                device=0 # Usa a primeira GPU NVIDIA disponível
+                                "zero-shot-classification",
+                                model=model_name,
+                                device=0,  # Usa a primeira GPU NVIDIA disponível
                             )
                             print("Modelo Zero-Shot (CUDA) carregado com sucesso!")
                         except Exception as e:
                             print(f"Erro ao carregar CUDA ({e}). Tentando fallback...")
-                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
-                    
-                    elif provider == "openvino" or (provider == "auto" and device != "CPU"):
+                            self.zero_shot_classifier = pipeline(
+                                "zero-shot-classification", model=model_name
+                            )
+
+                    elif provider == "openvino" or (
+                        provider == "auto" and device != "CPU"
+                    ):
                         # Lógica OpenVINO já existente (Intel/AMD)
-                        if device == "AUTO": device = "CPU"
-                        print(f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}...")
+                        if device == "AUTO":
+                            device = "CPU"
+                        print(
+                            f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}..."
+                        )
                         try:
                             model = OVModelForSequenceClassification.from_pretrained(
-                                model_name, 
-                                export=True, 
+                                model_name,
+                                export=True,
                                 device=device,
-                                load_in_8bit=(self.accel_config.get("quantization") == "int8")
+                                load_in_8bit=(
+                                    self.accel_config.get("quantization") == "int8"
+                                ),
                             )
                             tokenizer = AutoTokenizer.from_pretrained(model_name)
                             self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification", model=model, tokenizer=tokenizer
+                                "zero-shot-classification",
+                                model=model,
+                                tokenizer=tokenizer,
                             )
-                            print(f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!")
+                            print(
+                                f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!"
+                            )
                         except Exception as e:
-                            print(f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão...")
-                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                            print(
+                                f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão..."
+                            )
+                            self.zero_shot_classifier = pipeline(
+                                "zero-shot-classification", model=model_name
+                            )
                     else:
                         # Fallback CPU otimizado
-                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                        self.zero_shot_classifier = pipeline(
+                            "zero-shot-classification", model=model_name
+                        )
                 else:
                     # Modo padrão sem aceleração extra
                     print(f"A carregar o modelo Zero-Shot padrão ({model_name})...")
                     try:
-                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                        self.zero_shot_classifier = pipeline(
+                            "zero-shot-classification", model=model_name
+                        )
                         print("Modelo Zero-Shot carregado com sucesso!")
                     except Exception as e:
                         print(f"Aviso: Falha ao carregar modelo Zero-Shot: {e}")
