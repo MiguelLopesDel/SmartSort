@@ -1,34 +1,31 @@
 directories_to_watch:
-  - "data/downloads_test"
-destination_base_folder: "data/sorted"
-
-# Configurações Gerais
-show_recommendations: true  # Mostra sugestões de hardware durante instalação/update
-
-# Configurações de Inteligência Artificial para classificação
+- data/downloads_test
+destination_base_folder: data/sorted
+show_recommendations: true
 ai_classification:
   enabled: true
-  mode: "zero_shot" # "zero_shot" para HuggingFace, "local_ml" para scikit-learn, "api" para Gemini.
-  zero_shot_model: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli" # Modelo excelente para Zero-Shot multilingue (inclui PT)
-  categorias_disponiveis: ["Financas", "Trabalho", "Pessoal", "Saude", "Educacao", "Projetos"]
-
-# Configurações de Aceleração de Hardware
+  mode: zero_shot
+  zero_shot_model: mDeBERTa-v3
+  categorias_disponiveis:
+  - Financas
+  - Trabalho
+  - Pessoal
+  - Saude
+  - Educacao
+  - Projetos
 acceleration:
   enabled: true
-  device: "auto"        # auto, gpu, cpu (gpu usará OpenVINO/iGPU se disponível)
-  quantization: "int8"  # int8 para máxima performance, fp16 para precisão original
-
-# Configurações de Economia de Energia (Otimização para Notebooks)
+  device: gpu
+  quantization: int8
+  provider: auto
 power_saving:
   enabled: true
-  pause_ai_on_battery: true      # Desativa IA pesada (mDeBERTa/OCR) na bateria (usa fallback simples)
-  throttle_interval_sec: 10      # Intervalo maior entre verificações quando na bateria
-  stop_below_percent: 20         # Para o processamento se a bateria estiver abaixo deste nível
-
-# Regras simples de fallback (usadas se a IA estiver desativada ou falhar)
+  pause_ai_on_battery: true
+  throttle_interval_sec: 10
+  stop_below_percent: 20
 fallback_rules:
-  pdf: "Documentos"
-  jpg: "Imagens"
-  png: "Imagens"
-  docx: "Documentos"
-  txt: "Textos"
+  pdf: Documentos
+  jpg: Imagens
+  png: Imagens
+  docx: Documentos
+  txt: Textos

@@ -65,7 +65,7 @@ def show():
 
 
 @app.command()
-def model(name: str):
+def model(name: str = typer.Argument(..., help="Nome do modelo HuggingFace")):
     """Troca o modelo de Zero-Shot Classification (HuggingFace)."""
     config = load_config()
     if "ai_classification" not in config:
@@ -76,8 +76,13 @@ def model(name: str):
 
 
 @app.command()
-def accel(provider: str = "auto", device: str = "gpu", enabled: bool = True):
-    """Configura aceleração (provider: cuda, openvino, cpu | device: gpu, cpu)."""
+def accel(
+    provider: str = typer.Argument("auto", help="Provider: cuda, openvino, cpu"),
+    device: str = typer.Argument("gpu", help="Device: gpu, cpu"),
+    enabled: bool = typer.Option(True, help="Ativar ou desativar aceleração"),
+):
+    """Configura aceleração (provider e device)."""
+
     config = load_config()
     if "acceleration" not in config:
         config["acceleration"] = {}
@@ -154,6 +159,12 @@ def rm_dir(path: str):
     else:
         console.print("[red]Erro:[/red] Diretório não encontrado.")
 
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """Ferramenta de Configuração Inteligente do SmartSort. Se nenhum comando for passado, mostra as configurações."""
+    if ctx.invoked_subcommand is None:
+        show()
 
 if __name__ == "__main__":
     app()
