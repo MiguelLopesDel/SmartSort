@@ -17,6 +17,26 @@ O **SmartSort** é um serviço de automação para Linux que monitoriza diretór
 
 ---
 
+## 💻 Interface de Linha de Comando (CLI)
+
+O SmartSort inclui uma ferramenta de configuração visual para facilitar a gestão do serviço.
+
+### Comandos Disponíveis
+
+| Comando | Descrição | Exemplo de Uso |
+| :--- | :--- | :--- |
+| `show` | Visualiza todas as configurações atuais em formato de tabela. | `python3 src/smartsort/cli/config.py show` |
+| `status` | Exibe o status do hardware em tempo real (CPU, RAM, Bateria). | `python3 src/smartsort/cli/config.py status` |
+| `accel` | Configura o motor de aceleração (CUDA, OpenVINO ou CPU). | `python3 src/smartsort/cli/config.py accel cuda gpu` |
+| `model` | Troca o modelo de Inteligência Artificial utilizado. | `python3 src/smartsort/cli/config.py model nome-do-modelo` |
+| `add-dir` | Adiciona um novo diretório à lista de monitorização. | `python3 src/smartsort/cli/config.py add-dir ~/Downloads` |
+| `rm-dir` | Remove um diretório da monitorização. | `python3 src/smartsort/cli/config.py rm-dir ~/Downloads` |
+| `battery-mode` | Ativa ou desativa o modo de poupança de energia. | `python3 src/smartsort/cli/config.py battery-mode --on` |
+
+> **Nota:** Certifique-se de estar dentro do ambiente virtual (`source venv/bin/activate`) antes de executar os comandos da CLI.
+
+---
+
 ## 🚀 Instalação Automatizada (Recomendado)
 
 O SmartSort inclui um script de instalação inteligente que deteta a sua distribuição (Ubuntu, Debian, Arch, Fedora), verifica o hardware de GPU e configura o ambiente Python e o serviço de sistema.
