@@ -11,7 +11,9 @@ class HardwareRecommender:
     def detect_gpu(self):
         """Detecta detalhes da GPU via lspci."""
         try:
-            output = subprocess.check_output("lspci -nn | grep -E -i '(VGA|3D)'", shell=True).decode()
+            output = subprocess.check_output(
+                "lspci -nn | grep -E -i '(VGA|3D)'", shell=True
+            ).decode()
             gpu_info = output.lower()
 
             if "nvidia" in gpu_info:
@@ -36,9 +38,17 @@ class HardwareRecommender:
         gpu_type, provider = self.detect_gpu()
 
         rec = {
-            "acceleration": {"enabled": True, "provider": provider, "device": "gpu", "quantization": "int8"},
+            "acceleration": {
+                "enabled": True,
+                "provider": provider,
+                "device": "gpu",
+                "quantization": "int8",
+            },
             "power_saving": {"enabled": False},
-            "ai_classification": {"enabled": True, "zero_shot_model": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"},
+            "ai_classification": {
+                "enabled": True,
+                "zero_shot_model": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+            },
         }
 
         # Lógica de RAM e CPU (Subestimar vs Sobrecarregar)
@@ -85,9 +95,13 @@ class HardwareRecommender:
             print("💻 Notebook detectado! Ativando modo de economia de bateria.")
 
         print("\nConfigurações sugeridas:")
-        print(f"  - Aceleração: {rec['acceleration']['provider']} ({rec['acceleration']['device']})")
+        print(
+            f"  - Aceleração: {rec['acceleration']['provider']} ({rec['acceleration']['device']})"
+        )
         print(f"  - Precisão: {rec['acceleration']['quantization']}")
-        print(f"  - IA Ativa: {'Sim' if rec['ai_classification']['enabled'] else 'Não'}")
+        print(
+            f"  - IA Ativa: {'Sim' if rec['ai_classification']['enabled'] else 'Não'}"
+        )
         print("=" * 50 + "\n")
 
 
