@@ -1,31 +1,43 @@
+# Configuração do SmartSort
 directories_to_watch:
-- data/downloads_test
-destination_base_folder: data/sorted
+  - "data/downloads_test"
+
+destination_base_folder: "data/sorted"
 show_recommendations: true
+
+# Configurações de IA
 ai_classification:
   enabled: true
-  mode: zero_shot
-  zero_shot_model: mDeBERTa-v3
+  mode: "zero_shot"
+  zero_shot_model: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
   categorias_disponiveis:
-  - Financas
-  - Trabalho
-  - Pessoal
-  - Saude
-  - Educacao
-  - Projetos
+    - "Financas"
+    - "Trabalho"
+    - "Pessoal"
+    - "Saude"
+    - "Educacao"
+    - "Projetos"
+
+# Aceleração de Hardware
 acceleration:
   enabled: true
-  device: gpu
-  quantization: int8
-  provider: auto
+  provider: "auto"
+  device: "auto"
+  quantization: "int8"
+
+# Economia de Energia
 power_saving:
   enabled: true
   pause_ai_on_battery: true
   throttle_interval_sec: 10
   stop_below_percent: 20
+
+# Regras de Fallback (Extensões)
 fallback_rules:
-  pdf: Documentos
-  jpg: Imagens
-  png: Imagens
-  docx: Documentos
-  txt: Textos
+  pdf: "Documentos"
+  jpg: "Imagens"
+  png: "Imagens"
+  docx: "Documentos"
+  txt: "Textos"
+  mp4: "Videos"
+  mkv: "Videos"
