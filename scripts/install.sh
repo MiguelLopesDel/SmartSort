@@ -35,9 +35,12 @@ verificar_atualizacao() {
 
 
 detectar_distro() {
-    OS_RELEASE_FILE=${MOCK_OS_RELEASE:-$MOCK_OS_RELEASE}
-    if [ -f "$OS_RELEASE_FILE" ]; then
-        . "$OS_RELEASE_FILE"
+    if [ -f "/etc/os-release" ]; then
+        . "/etc/os-release"
+        DISTRO=$ID
+        DISTRO_LIKE=$ID_LIKE
+    elif [ -f "/usr/lib/os-release" ]; then
+        . "/usr/lib/os-release"
         DISTRO=$ID
         DISTRO_LIKE=$ID_LIKE
     else
