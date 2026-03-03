@@ -1,14 +1,22 @@
 #!/bin/bash
 
-# Mudar para a raiz do projeto
+# Mudar para a raiz do projeto e validar localização
 cd "$(dirname "$0")/.."
+ROOT_DIR=$(pwd)
 
 VERDE='\033[0;32m'
 AMARELO='\033[1;33m'
 VERMELHO='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${AMARELO}Bem-vindo ao desinstalador do SmartSort!${NC}"
+# SEGURANÇA: Validar se estamos mesmo no diretório do SmartSort
+if [ ! -f "src/smartsort/__main__.py" ]; then
+    echo -e "${VERMELHO}ERRO CRÍTICO: Não foi possível validar a raiz do projeto SmartSort em $ROOT_DIR.${NC}"
+    echo "A desinstalação foi abortada por segurança para evitar apagar ficheiros incorretos."
+    exit 1
+fi
+
+echo -e "${AMARELO}Bem-vindo ao desinstalador do SmartSort! (Diretório: $ROOT_DIR)${NC}"
 
 # 1. Remover o Serviço Systemd
 remover_servico() {
@@ -27,11 +35,9 @@ remover_servico() {
 # 2. Remover o Ambiente Virtual
 remover_venv() {
     echo "A remover o ambiente virtual (venv)..."
-    if [ -d "venv" ]; then
-        rm -rf venv
+    if [ -d "$ROOT_DIR/venv" ]; then
+        rm -rf "$ROOT_DIR/venv"
         echo -e "${VERDE}Ambiente virtual removido.${NC}"
-    else
-        echo "Ambiente virtual não encontrado."
     fi
 }
 
@@ -39,17 +45,22 @@ remover_venv() {
 remover_config() {
     read -p "Deseja remover as configurações em config/config.yaml? [s/N]: " remover
     if [[ "$remover" == "s" || "$remover" == "S" ]]; then
-        rm -rf config/
-        echo -e "${VERDE}Configurações removidas.${NC}"
+        if [ -d "$ROOT_DIR/config" ]; then
+            rm -rf "$ROOT_DIR/config"
+            echo -e "${VERDE}Configurações removidas.${NC}"
+        fi
     fi
 }
 
 # 4. Remover Dados Ordenados (Opcional)
 remover_dados() {
-    read -p "Deseja remover a pasta de ficheiros ordenados (data/sorted)? [s/N]: " remover
+    echo -e "${AMARELO}AVISO: A pasta de dados ordenados (data/sorted) contém os seus ficheiros organizados.${NC}"
+    read -p "Deseja remover DEFINITIVAMENTE a pasta data/sorted? [s/N]: " remover
     if [[ "$remover" == "s" || "$remover" == "S" ]]; then
-        rm -rf data/sorted/
-        echo -e "${VERDE}Pasta de dados ordenados removida.${NC}"
+        if [ -d "$ROOT_DIR/data/sorted" ]; then
+            rm -rf "$ROOT_DIR/data/sorted"
+            echo -e "${VERDE}Pasta de dados ordenados removida.${NC}"
+        fi
     fi
 }
 
