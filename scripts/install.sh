@@ -181,6 +181,10 @@ configurar_python() {
     fi
     source venv/bin/activate
     
+    # Configura TMPDIR local para evitar erro de cota no /tmp (comum no Arch)
+    mkdir -p "$(pwd)/.tmp"
+    export TMPDIR="$(pwd)/.tmp"
+    
     echo "Instalando requisitos essenciais do Python..."
     pip install --upgrade pip || { echo -e "${VERMELHO}Erro ao atualizar pip.${NC}"; exit 1; }
     if [ -f "requirements.txt" ]; then
