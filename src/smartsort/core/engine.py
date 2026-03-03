@@ -77,8 +77,9 @@ class FileProcessor:
                             f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}..."
                         )
                         try:
-                            from optimum.intel.openvino import \
-                                OVModelForSequenceClassification
+                            from optimum.intel.openvino import (
+                                OVModelForSequenceClassification,
+                            )
 
                             model = OVModelForSequenceClassification.from_pretrained(
                                 model_name,
