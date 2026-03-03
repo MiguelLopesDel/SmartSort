@@ -1,0 +1,18 @@
+directories_to_watch:
+  - "data/downloads_test"
+destination_base_folder: "data/sorted"
+
+# Configurações de Inteligência Artificial para classificação
+ai_classification:
+  enabled: true
+  mode: "zero_shot" # "zero_shot" para HuggingFace, "local_ml" para scikit-learn, "api" para Gemini.
+  zero_shot_model: "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli" # Modelo excelente para Zero-Shot multilingue (inclui PT)
+  categorias_disponiveis: ["Financas", "Trabalho", "Pessoal", "Saude", "Educacao", "Projetos"]
+
+# Regras simples de fallback (usadas se a IA estiver desativada ou falhar)
+fallback_rules:
+  pdf: "Documentos"
+  jpg: "Imagens"
+  png: "Imagens"
+  docx: "Documentos"
+  txt: "Textos"
