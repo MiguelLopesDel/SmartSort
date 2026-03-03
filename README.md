@@ -59,6 +59,11 @@ ai_classification:
   categorias_disponiveis: ["Financas", "Trabalho", "Pessoal", "Saude"]
 ```
 
+### 🧹 Reorganização de Ficheiros Existentes
+Por padrão, o SmartSort **reorganiza automaticamente** todos os ficheiros que já se encontram nas pastas vigiadas assim que o serviço arranca. 
+
+Esta funcionalidade garante que o seu diretório seja limpo imediatamente, sem precisar de esperar por novos eventos de download. A lógica de segurança impede que ficheiros ocultos (como `.gitkeep`) ou subpastas sejam movidos indevidamente.
+
 ---
 
 ## 🛠️ Gestão do Serviço

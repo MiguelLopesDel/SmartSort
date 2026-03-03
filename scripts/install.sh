@@ -137,7 +137,7 @@ instalar_dependencias() {
         sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr pciutils mesa-utils
     elif [[ "$DISTRO" == "arch" || "$DISTRO_LIKE" == *"arch"* ]]; then
         echo "Executando pacman..."
-        sudo pacman -Sy --noconfirm --needed python python-venv python-pip git tesseract pciutils mesa-utils
+        sudo pacman -Sy --noconfirm --needed python python-pip git tesseract pciutils mesa-utils
     elif [[ "$DISTRO" == "fedora" || "$DISTRO_LIKE" == *"fedora"* ]]; then
         echo "Executando dnf..."
         sudo dnf install -y python3 python3-pip git tesseract pciutils mesa-libGL-devel
@@ -168,11 +168,17 @@ configurar_python() {
 instalar_servico() {
     echo "Instalando o serviço SmartSort no systemd..."
     if [ -f "deploy/smartsort.service" ]; then
-        sudo cp deploy/smartsort.service /etc/systemd/system/smartsort.service
+        CURRENT_USER=$(whoami)
+        PROJECT_DIR=$(pwd)
+        
+        sed "s|USER_PLACEHOLDER|$CURRENT_USER|g; s|WORKING_DIR_PLACEHOLDER|$PROJECT_DIR|g" deploy/smartsort.service > /tmp/smartsort.service
+        
+        sudo cp /tmp/smartsort.service /etc/systemd/system/smartsort.service
         sudo systemctl daemon-reload
         sudo systemctl enable smartsort.service
-        sudo systemctl start smartsort.service
-        echo -e "${VERDE}Serviço instalado e iniciado! Use 'sudo systemctl status smartsort' para ver o status.${NC}"
+        sudo systemctl restart smartsort.service
+        echo -e "${VERDE}Serviço instalado e iniciado para o utilizador $CURRENT_USER!${NC}"
+        echo "Use 'sudo systemctl status smartsort' para ver o status."
     else
         echo -e "${VERMELHO}Arquivo smartsort.service não encontrado! O serviço não pôde ser instalado.${NC}"
     fi

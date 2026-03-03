@@ -1,8 +1,9 @@
 watchdog
-pyyamlpypdf
+pyyaml
+pypdf
 pytesseract
-scikit-learn
+pillow
 joblib
+scikit-learn
 transformers
 torch
-pytest
