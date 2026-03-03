@@ -10,6 +10,7 @@ from PIL import Image
 from transformers import AutoTokenizer, pipeline
 
 from smartsort.utils.power import PowerManager
+from smartsort.utils.recommender import HardwareRecommender
 
 
 class FileProcessor:
@@ -17,9 +18,18 @@ class FileProcessor:
         self.config = config
         self.accel_config = config.get("acceleration", {"enabled": False})
         self.power_manager = PowerManager(config)
+        self.recommender = HardwareRecommender(config)
         self.destination_base = config.get("destination_base_folder", "data/sorted")
         self.ai_config = config.get("ai_classification", {})
         self.fallback_rules = config.get("fallback_rules", {})
+
+        # Resolução Dinâmica de Hardware
+        if self.accel_config.get("enabled", False) and self.accel_config.get("provider") == "auto":
+            on_battery = self.power_manager.is_on_battery()
+            p, d = self.recommender.get_best_acceleration(on_battery)
+            self.accel_config["provider"] = p
+            self.accel_config["device"] = d
+            print(f"[AUTO] Hardware detetado. Usando: {p.upper()} no {d.upper()} (Bateria: {on_battery})")
 
         self.ml_model = None
         self.zero_shot_classifier = None
