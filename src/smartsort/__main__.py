@@ -1,9 +1,12 @@
-import time
 import os
+import time
+
 import yaml
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
 from .core.engine import FileProcessor
+
 
 class FileHandler(FileSystemEventHandler):
     def __init__(self, config):
@@ -12,8 +15,12 @@ class FileHandler(FileSystemEventHandler):
     def is_temporary(self, path):
         filename = os.path.basename(path)
 
-        temp_extensions = ('.part', '.crdownload', '.tmp', '.kate-swp', '.swp', '.swx')
-        if filename.startswith('.') or filename.endswith(temp_extensions) or filename.endswith('~'):
+        temp_extensions = (".part", ".crdownload", ".tmp", ".kate-swp", ".swp", ".swx")
+        if (
+            filename.startswith(".")
+            or filename.endswith(temp_extensions)
+            or filename.endswith("~")
+        ):
             return True
         return False
 
@@ -28,6 +35,7 @@ class FileHandler(FileSystemEventHandler):
             print(f"Nova pasta detetada: {event.src_path}")
             self.processor.process_file(event.src_path)
 
+
 class ConfigHandler(FileSystemEventHandler):
     def __init__(self, observer, config_path, current_handler):
         self.observer = observer
@@ -36,20 +44,25 @@ class ConfigHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if event.src_path.endswith("config.yaml"):
-            print("\\n--- Alteração detetada em config.yaml. A recarregar definições... ---")
+            print(
+                "\\n--- Alteração detetada em config.yaml. A recarregar definições... ---"
+            )
             new_config = load_config(self.config_path)
             if new_config:
 
                 self.handler.processor.config = new_config
-                self.handler.processor.destination_base = new_config.get("destination_base_folder", "data/sorted")
-
+                self.handler.processor.destination_base = new_config.get(
+                    "destination_base_folder", "data/sorted"
+                )
 
                 self.observer.unschedule_all()
                 setup_observers(self.observer, self.handler, new_config)
 
-
-                self.observer.schedule(self, path=os.path.dirname(self.config_path), recursive=False)
+                self.observer.schedule(
+                    self, path=os.path.dirname(self.config_path), recursive=False
+                )
                 print("--- Configuração atualizada com sucesso! ---\\n")
+
 
 def load_config(config_path="config/config.yaml"):
     try:
@@ -58,6 +71,7 @@ def load_config(config_path="config/config.yaml"):
     except Exception as e:
         print(f"Erro ao carregar o config.yaml: {e}")
         return None
+
 
 def setup_observers(observer, handler, config):
     directories = config.get("directories_to_watch", [])
@@ -70,6 +84,7 @@ def setup_observers(observer, handler, config):
         observer.schedule(handler, path=abs_path, recursive=False)
         print(f"A monitorizar o diretório: {abs_path}")
 
+
 def main():
     config_path = "config/config.yaml"
     config = load_config(config_path)
@@ -80,12 +95,12 @@ def main():
     observer = Observer()
     handler = FileHandler(config)
 
-
     setup_observers(observer, handler, config)
 
-
     config_watcher = ConfigHandler(observer, config_path, handler)
-    observer.schedule(config_watcher, path=os.path.dirname(config_path), recursive=False)
+    observer.schedule(
+        config_watcher, path=os.path.dirname(config_path), recursive=False
+    )
 
     observer.start()
     try:
@@ -94,6 +109,7 @@ def main():
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
 
 if __name__ == "__main__":
     main()

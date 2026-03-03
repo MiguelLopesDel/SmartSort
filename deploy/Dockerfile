@@ -1,12 +1,22 @@
-# Escolha uma imagem base oficial da Microsoft (existem para Python, Go, Rust, etc.)
-FROM mcr.microsoft.com/devcontainers/javascript-node:20
+# Imagem de produção para SmartSort
+FROM python:3.11-slim
 
-# Instalar pacotes adicionais do SO para facilitar o debug e uso do terminal
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends vim curl procps
+# Instalar dependências do sistema para OCR (Tesseract) e Português
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-por \
+    libtesseract-dev \
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Instalar o pnpm globalmente, que é muito mais rápido que o npm padrão
-RUN su node -c "npm install -g pnpm"
+# Configurar diretório de trabalho
+WORKDIR /app
 
-# Configurar o diretório de trabalho padrão
-WORKDIR /workspaces/${localWorkspaceFolderBasename}
+# Copiar requisitos e instalar dependências Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar o código fonte
+COPY . .
+
+# Comando padrão para rodar o serviço
+CMD ["python3", "-m", "src.smartsort"]

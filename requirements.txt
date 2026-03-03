@@ -7,3 +7,8 @@ joblib
 scikit-learn
 transformers
 torch
+pytest
+pytest-mock
+black
+isort
+flake8
