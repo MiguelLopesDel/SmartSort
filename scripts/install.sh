@@ -116,14 +116,8 @@ detectar_gpu() {
         echo -e "${AMARELO}Nenhuma GPU dedicada detectada. O SmartSort usará a CPU/iGPU.${NC}"
         return 0
     fi
-    echo -e "GPU Dedicada detectada: ${VERDE}${GPU_VENDOR}${NC}"
-}
 
-gerar_recomendacoes() {
-    echo "Analisando hardware para otimização..."
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-    python3 src/smartsort/utils/recommender.py
-}
+    echo -e "GPU Dedicada detectada: ${VERDE}${GPU_VENDOR}${NC}"
     
     if [ "$GPU_VENDOR" = "NVIDIA" ]; then
         echo -e "Driver NVIDIA em uso: ${AMARELO}${NVIDIA_DRIVER}${NC}"
@@ -137,6 +131,13 @@ gerar_recomendacoes() {
             fi
         fi
     fi
+}
+
+gerar_recomendacoes() {
+    echo "Analisando hardware para otimização..."
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+    # Tenta rodar o recomendador apenas se o venv estiver ativo ou python3 disponível
+    python3 src/smartsort/utils/recommender.py || echo "Aviso: Não foi possível gerar recomendações agora."
 }
 
 
