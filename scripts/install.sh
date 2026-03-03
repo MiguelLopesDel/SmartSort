@@ -29,12 +29,21 @@ verificar_atualizacao() {
                 git stash > /dev/null 2>&1
                 if git pull; then
                     echo "Aplicando alterações locais de volta..."
-                    git stash pop > /dev/null 2>&1
+                    if git stash pop > /dev/null 2>&1; then
+                        echo -e "${VERDE}Alterações locais aplicadas com sucesso.${NC}"
+                    else
+                        echo -e "${AMARELO}AVISO: Conflitos detetados ao reaplicar as suas alterações.${NC}"
+                        echo "O ficheiro config/config.yaml foi corrompido com marcadores de conflito do Git."
+                        echo "Por favor, resolva os conflitos manualmente ou use 'git checkout config/config.yaml' para resetar."
+                    fi
                     echo -e "${VERDE}Atualização concluída. Reiniciando o instalador...${NC}"
                     exec "$0" "--skip-update"
                 else
-                    echo -e "${VERMELHO}Falha ao atualizar via git pull. Por favor, verifique conflitos manualmente.${NC}"
+                    echo -e "${VERMELHO}ERRO: Falha crítica ao atualizar via git pull.${NC}"
+                    echo "O repositório tem conflitos que precisam de ser resolvidos manualmente."
+                    echo "Sugestão: git merge --abort && git checkout config/config.yaml && git pull"
                     git stash pop > /dev/null 2>&1
+                    exit 1
                 fi
             fi
         else

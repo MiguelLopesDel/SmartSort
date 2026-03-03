@@ -57,16 +57,20 @@ class ConfigHandler(FileSystemEventHandler):
 
 def load_config(config_path="config/config.yaml"):
     # Tenta carregar até 3 vezes com pequeno intervalo para lidar com race conditions
+    last_error = None
     for attempt in range(3):
         try:
             with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
                 if config:
                     return config
-        except Exception:
+        except Exception as e:
+            last_error = e
             if attempt < 2:
                 time.sleep(0.5)
                 continue
+    if last_error:
+        print(f"Erro ao carregar o config.yaml: {last_error}")
     return None
 
 
