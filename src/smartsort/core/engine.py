@@ -6,7 +6,6 @@ import time
 import joblib
 import pypdf
 import pytesseract
-from optimum.intel.openvino import OVModelForSequenceClassification
 from PIL import Image
 from transformers import AutoTokenizer, pipeline
 
@@ -78,6 +77,10 @@ class FileProcessor:
                             f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}..."
                         )
                         try:
+                            from optimum.intel.openvino import (
+                                OVModelForSequenceClassification,
+                            )
+
                             model = OVModelForSequenceClassification.from_pretrained(
                                 model_name,
                                 export=True,
