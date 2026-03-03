@@ -65,42 +65,35 @@ class FileProcessor:
                 self.process_file(file_path)
 
     def process_file(self, file_path):
-
         if not os.path.exists(file_path):
+            return
+
+        # SEGURANÇA: Não mover a própria pasta do projeto
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
+        if os.path.abspath(file_path).startswith(project_root):
             return
 
         filename = os.path.basename(file_path)
         
-
         if filename.endswith(".crdownload") or filename.endswith(".part"):
-            print(f"Ignorando ficheiro temporário: {filename}")
             return
 
-
         time.sleep(1)
-        
-
         if not os.path.exists(file_path):
             return
 
-        print(f"\\nA processar ficheiro: {filename}")
+        print(f"\\nA processar: {filename} ({'Pasta' if os.path.isdir(file_path) else 'Ficheiro'})")
         
-
         category_raw = self.classify_file(file_path, filename)
         category = self.sanitize_category(category_raw)
-
-        
 
         target_dir = os.path.join(self.destination_base, category)
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-            print(f"Criada nova pasta de categoria: {target_dir}")
-            
 
         destination_path = os.path.join(target_dir, filename)
         
         try:
-
             if os.path.exists(destination_path):
                 base, ext = os.path.splitext(filename)
                 destination_path = os.path.join(target_dir, f"{base}_{int(time.time())}{ext}")
@@ -108,7 +101,7 @@ class FileProcessor:
             shutil.move(file_path, destination_path)
             print(f"Sucesso: Movido para {destination_path}")
         except Exception as e:
-            print(f"Erro ao mover o ficheiro {filename}: {e}")
+            print(f"Erro ao mover {filename}: {e}")
 
     def extract_text_from_pdf(self, file_path):
         try:
