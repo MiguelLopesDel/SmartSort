@@ -45,20 +45,14 @@ class ConfigHandler(FileSystemEventHandler):
             time.sleep(0.5)
             new_config = load_config(self.config_path)
             if new_config:
-                print(
-                    "\n--- Alteração detetada em config.yaml. A recarregar definições... ---"
-                )
+                print("\n--- Alteração detetada em config.yaml. A recarregar definições... ---")
                 self.handler.processor.config = new_config
-                self.handler.processor.destination_base = new_config.get(
-                    "destination_base_folder", "data/sorted"
-                )
+                self.handler.processor.destination_base = new_config.get("destination_base_folder", "data/sorted")
 
                 self.observer.unschedule_all()
                 setup_observers(self.observer, self.handler, new_config)
 
-                self.observer.schedule(
-                    self, path=os.path.dirname(self.config_path), recursive=False
-                )
+                self.observer.schedule(self, path=os.path.dirname(self.config_path), recursive=False)
                 print("--- Configuração atualizada com sucesso! ---\n")
 
 
@@ -103,9 +97,7 @@ def main():
 
     # Monitoriza mudanças no próprio ficheiro de configuração
     config_watcher = ConfigHandler(observer, config_path, handler)
-    observer.schedule(
-        config_watcher, path=os.path.dirname(config_path), recursive=False
-    )
+    observer.schedule(config_watcher, path=os.path.dirname(config_path), recursive=False)
 
     observer.start()
 

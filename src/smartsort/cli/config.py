@@ -168,5 +168,6 @@ def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
         show()
 
+
 if __name__ == "__main__":
     app()
