@@ -22,8 +22,7 @@ class SmartSortTUI:
 
     def draw_header(self):
         return Panel(
-            "[bold blue]SmartSort - Painel de Controle Interativo[/bold blue]
-"
+            "[bold blue]SmartSort - Painel de Controle Interativo[/bold blue]\n"
             "[dim]Use os números para navegar e configurar seu sistema[/dim]",
             box=box.DOUBLE_EDGE,
             style="cyan"
@@ -72,8 +71,7 @@ class SmartSortTUI:
             
             if choice == 1:
                 show_status()
-                Prompt.ask("
-Pressione Enter para voltar")
+                Prompt.ask("\nPressione Enter para voltar")
             elif choice == 2:
                 path = Prompt.ask("Digite o caminho completo da pasta")
                 if path:
@@ -107,8 +105,7 @@ Pressione Enter para voltar")
                 console.print(Panel(last_logs, title="Últimos Logs", border_style="dim"))
         else:
             console.print("[red]Arquivo de log não encontrado.[/red]")
-        Prompt.ask("
-Pressione Enter para voltar")
+        Prompt.ask("\nPressione Enter para voltar")
 
 def start_tui():
     tui = SmartSortTUI()

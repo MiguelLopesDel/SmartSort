@@ -1298,3 +1298,106 @@ Cannot load library "/workspaces/SmartSort/venv/lib/python3.13/site-packages/ope
 2026-03-03 19:05:27,903 - smartsort - INFO - trainer.py:20 - A treinar o modelo local de Machine Learning...
 2026-03-03 19:05:28,007 - smartsort - INFO - trainer.py:36 - Modelo treinado e guardado em: [green]models/test_model.joblib[/green]
 2026-03-03 19:05:28,009 - smartsort - WARNING - trainer.py:17 - Nenhum dado de treino fornecido. A ignorar treino.
+2026-03-03 19:09:03,600 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]tests/test_tui.py[/blue]
+2026-03-03 19:09:08,448 - smartsort.utils.power - INFO - power.py:46 - Modo Bateria Ativo: Usando regras simples de fallback para economizar energia.
+2026-03-03 19:09:08,452 - smartsort - INFO - engine.py:251 - Modo Economia: Saltando IA pesada para [yellow]teste.pdf[/yellow].
+2026-03-03 19:09:08,456 - smartsort.utils.power - WARNING - power.py:36 - Bateria em 15%. Abaixo do limite de 20%. Parando.
+2026-03-03 19:09:08,458 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]/tmp/tmp9e6_jeib.py[/blue]
+2026-03-03 19:09:08,460 - smartsort - INFO - cleaner.py:153 - Comentários removidos (Shell): [blue]/tmp/tmpsp95pteo.sh[/blue]
+2026-03-03 19:09:08,469 - smartsort - INFO - engine.py:119 - Carregando Zero-Shot padrão (CPU)... (MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)
+2026-03-03 19:09:08,471 - smartsort - INFO - engine.py:97 - Carregando Zero-Shot para CUDA... (MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)
+2026-03-03 19:09:08,473 - smartsort - ERROR - engine.py:125 - Falha ao carregar modelo de IA: 
+Traceback (most recent call last):
+  File "/workspaces/SmartSort/src/smartsort/core/engine.py", line 102, in _load_models
+    from optimum.intel.openvino import OVModelForSequenceClassification
+  File "/usr/lib/python3.13/unittest/mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/unittest/mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/unittest/mock.py", line 1234, in _execute_mock_call
+    result = effect(*args, **kwargs)
+  File "/workspaces/SmartSort/tests/test_hardware_logic.py", line 62, in side_effect
+    raise ImportError
+ImportError
+2026-03-03 19:09:15,632 - smartsort - INFO - engine.py:108 - Exportando MoritzLaurer/mDeBERTa-v3-base-mnli-xnli para OpenVINO (Cache Local)...
+2026-03-03 19:09:31,172 - smartsort - ERROR - engine.py:125 - Falha ao carregar modelo de IA: Exception from src/inference/src/cpp/core.cpp:110:
+Cannot load library "/workspaces/SmartSort/venv/lib/python3.13/site-packages/openvino/../openvino/libs/libopenvino_intel_gpu_plugin.so": libOpenCL.so.1: cannot open shared object file: No such file or directory
+Traceback (most recent call last):
+  File "/workspaces/SmartSort/src/smartsort/core/engine.py", line 110, in _load_models
+    model = OVModelForSequenceClassification.from_pretrained(
+        model_name, export=True, device=device.upper(),
+        load_in_8bit=(accel_config.get("quantization") == "int8")
+    )
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 625, in from_pretrained
+    return super().from_pretrained(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        model_id,
+        ^^^^^^^^^
+    ...<9 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/modeling_base.py", line 407, in from_pretrained
+    return from_pretrained_method(
+        model_id=model_id,
+    ...<9 lines>...
+        **kwargs,
+    )
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 862, in _export
+    return cls._from_pretrained(
+           ~~~~~~~~~~~~~~~~~~~~^
+        model_id=save_dir_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 536, in _from_pretrained
+    model = cls(
+        ov_model,
+    ...<4 lines>...
+        **kwargs,
+    )
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling.py", line 159, in __init__
+    super().__init__(model, config, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling.py", line 125, in __init__
+    super().__init__(model, config, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 290, in __init__
+    self.compile()
+    ~~~~~~~~~~~~^^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 922, in compile
+    self.request = self._compile_model(self.model, self._device, ov_config, self.model_save_dir)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/optimum/intel/openvino/modeling_base.py", line 418, in _compile_model
+    compiled_model = core.compile_model(model, device.upper() if device is not None else device, config=ov_config)
+  File "/workspaces/SmartSort/venv/lib/python3.13/site-packages/openvino/_ov_api.py", line 646, in compile_model
+    super().compile_model(model, device_name, {} if config is None else config),
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Exception from src/inference/src/cpp/core.cpp:110:
+Cannot load library "/workspaces/SmartSort/venv/lib/python3.13/site-packages/openvino/../openvino/libs/libopenvino_intel_gpu_plugin.so": libOpenCL.so.1: cannot open shared object file: No such file or directory
+
+2026-03-03 19:09:31,365 - smartsort - INFO - engine.py:251 - Modo Economia: Saltando IA pesada para [yellow]test.pdf[/yellow].
+2026-03-03 19:09:31,376 - smartsort - INFO - __main__.py:19 - Novo ficheiro detetado: [bold cyan]test.txt[/bold cyan]
+2026-03-03 19:09:31,379 - smartsort - ERROR - engine.py:228 - Erro ao extrair texto do PDF: [Errno 2] No such file or directory: 'fake_path.pdf'
+2026-03-03 19:09:31,380 - smartsort - ERROR - engine.py:243 - Erro ao extrair texto da imagem: [Errno 2] No such file or directory: 'fake_path.jpg'
+2026-03-03 19:09:33,382 - smartsort - INFO - engine.py:195 - A processar: [bold]nota_urgente.txt[/bold] (Ficheiro)
+2026-03-03 19:09:33,389 - smartsort - INFO - engine.py:212 - Sucesso: Movido para [green]/tmp/tmptzizhda9/test_destination/Textos_Teste/nota_urgente.txt[/green]
+2026-03-03 19:09:35,404 - smartsort - INFO - engine.py:195 - A processar: [bold]importante.txt[/bold] (Ficheiro)
+2026-03-03 19:09:35,409 - smartsort - INFO - engine.py:212 - Sucesso: Movido para [green]/tmp/tmpwsmmr_at/test_destination/Textos_Teste/importante_1772564975.txt[/green]
+2026-03-03 19:09:35,439 - smartsort - INFO - engine.py:119 - Carregando Zero-Shot padrão (CPU)... (MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)
+2026-03-03 19:09:38,698 - smartsort - INFO - engine.py:195 - A processar: [bold]doc_ia.txt[/bold] (Ficheiro)
+2026-03-03 19:09:38,705 - smartsort - INFO - engine.py:299 - IA classificou como: [magenta]Seguranca_IA[/magenta] (Confiança: 0.99)
+2026-03-03 19:09:38,707 - smartsort - INFO - engine.py:212 - Sucesso: Movido para [green]/tmp/tmp7qzmsqjl/test_destination/Seguranca_IA/doc_ia.txt[/green]
+2026-03-03 19:09:38,712 - smartsort - INFO - engine.py:138 - A verificar ficheiros existentes em: ['/tmp/tmp24ma985m/test_downloads']
+2026-03-03 19:09:40,714 - smartsort - INFO - engine.py:195 - A processar: [bold]documento.pdf[/bold] (Ficheiro)
+2026-03-03 19:09:40,718 - smartsort - ERROR - engine.py:228 - Erro ao extrair texto do PDF: Stream has ended unexpectedly
+2026-03-03 19:09:40,720 - smartsort - INFO - engine.py:212 - Sucesso: Movido para [green]/tmp/tmp24ma985m/test_destination/Documentos_Teste/documento.pdf[/green]
+2026-03-03 19:09:40,740 - smartsort - INFO - trainer.py:20 - A treinar o modelo local de Machine Learning...
+2026-03-03 19:09:40,829 - smartsort - INFO - trainer.py:36 - Modelo treinado e guardado em: [green]models/test_model.joblib[/green]
+2026-03-03 19:09:40,831 - smartsort - WARNING - trainer.py:17 - Nenhum dado de treino fornecido. A ignorar treino.
