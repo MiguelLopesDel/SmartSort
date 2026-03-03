@@ -214,26 +214,53 @@ configurar_python() {
 
 
 instalar_servico() {
-    echo "Instalando o serviço SmartSort no systemd..."
+    echo "Verificando instalação do serviço systemd..."
+    SERVICE_PATH="/etc/systemd/system/smartsort.service"
+    BIN_PATH="/usr/local/bin/smartsort"
+    CURRENT_USER=$(whoami)
+    PROJECT_DIR=$(pwd)
+    
+    NEED_UPDATE=false
+    
+    # Gera um arquivo temporário para comparação
+    TEMP_SERVICE="/tmp/smartsort.service.new"
     if [ -f "deploy/smartsort.service" ]; then
-        CURRENT_USER=$(whoami)
-        PROJECT_DIR=$(pwd)
-        
-        sed "s|USER_PLACEHOLDER|$CURRENT_USER|g; s|WORKING_DIR_PLACEHOLDER|$PROJECT_DIR|g" deploy/smartsort.service > /tmp/smartsort.service
-        
-        sudo cp /tmp/smartsort.service /etc/systemd/system/smartsort.service
+        sed "s|USER_PLACEHOLDER|$CURRENT_USER|g; s|WORKING_DIR_PLACEHOLDER|$PROJECT_DIR|g" deploy/smartsort.service > "$TEMP_SERVICE"
+    else
+        echo -e "${VERMELHO}Erro: deploy/smartsort.service não encontrado.${NC}"
+        return 1
+    fi
+
+    # 1. Verifica se o arquivo de serviço mudou
+    if [ ! -f "$SERVICE_PATH" ]; then
+        NEED_UPDATE=true
+    elif ! cmp -s "$TEMP_SERVICE" "$SERVICE_PATH" 2>/dev/null; then
+        NEED_UPDATE=true
+    fi
+
+    # 2. Verifica se o atalho da CLI está correto
+    if [ ! -L "$BIN_PATH" ] || [ "$(readlink -f "$BIN_PATH")" != "$PROJECT_ROOT/smartsort-cli.sh" ]; then
+        NEED_UPDATE=true
+    fi
+
+    # 3. Verifica se o serviço está ativo (se não estiver, precisamos de sudo para iniciar)
+    if ! systemctl is-active --quiet smartsort.service 2>/dev/null; then
+        NEED_UPDATE=true
+    fi
+
+    if [ "$NEED_UPDATE" = true ]; then
+        echo "Instalando/Atualizando componentes do sistema (requer sudo)..."
+        sudo cp "$TEMP_SERVICE" "$SERVICE_PATH"
         sudo systemctl daemon-reload
         sudo systemctl enable smartsort.service
         sudo systemctl restart smartsort.service
-        
-        echo "Configurando atalho global para a CLI..."
-        sudo ln -sf "$PROJECT_ROOT/smartsort-cli.sh" /usr/local/bin/smartsort
-        
-        echo -e "${VERDE}Serviço instalado e iniciado para o utilizador $CURRENT_USER!${NC}"
-        echo -e "Agora você pode usar o comando '${AMARELO}smartsort${NC}' de qualquer lugar."
+        sudo ln -sf "$PROJECT_ROOT/smartsort-cli.sh" "$BIN_PATH"
+        echo -e "${VERDE}Sistema atualizado e serviço reiniciado!${NC}"
     else
-        echo -e "${VERMELHO}Arquivo smartsort.service não encontrado! O serviço não pôde ser instalado.${NC}"
+        echo "O serviço e os atalhos já estão atualizados. Pulando etapa de sudo."
     fi
+    
+    rm -f "$TEMP_SERVICE"
 }
 
 
