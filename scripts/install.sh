@@ -1,6 +1,10 @@
 #!/bin/bash
 
-cd "$(dirname "$0")/.."
+# Deteta a pasta real do script e a raiz do projeto
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+cd "$PROJECT_ROOT"
 
 VERDE='\033[0;32m'
 AMARELO='\033[1;33m'
