@@ -50,11 +50,10 @@ class TestHardwareLogicDecision(unittest.TestCase):
 
     @patch("smartsort.core.engine.pipeline")
     def test_openvino_acceleration_selection(self, mock_pipe):
-        """Verifica se o provider 'openvino' tenta carregar a classe correta via import local."""
+        """Verifica se o sistema lida com falha no import do OpenVINO."""
         config = self.config.copy()
         config["acceleration"]["provider"] = "openvino"
         config["acceleration"]["device"] = "gpu"
-
 
         original_import = __import__
 
@@ -64,9 +63,10 @@ class TestHardwareLogicDecision(unittest.TestCase):
             return original_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=side_effect):
+            # No novo código, a exceção é capturada e logada, 
+            # e como zero_shot_classifier fica None, o pipeline não é chamado no init
             FileProcessor(config)
-
-            self.assertTrue(mock_pipe.called)
+            self.assertFalse(mock_pipe.called)
 
     @patch("smartsort.core.engine.pipeline")
     @patch("os.path.exists")

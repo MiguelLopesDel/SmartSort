@@ -1,13 +1,15 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from smartsort.__main__ import load_config, SmartSortHandler
+from smartsort.__main__ import load_config, SmartSortHandler, DEFAULT_CONFIG
 
 class TestMain(unittest.TestCase):
     
     @patch("yaml.safe_load")
     @patch("builtins.open")
-    def test_load_config_main(self, mock_file, mock_yaml):
+    @patch("os.path.exists")
+    def test_load_config_main(self, mock_exists, mock_file, mock_yaml):
+        mock_exists.return_value = True
         mock_yaml.return_value = {"test": True}
         config = load_config("fake_path")
         self.assertEqual(config, {"test": True})

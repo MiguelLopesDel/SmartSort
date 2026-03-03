@@ -17,118 +17,112 @@ from smartsort.utils.recommender import HardwareRecommender
 class FileProcessor:
     def __init__(self, config):
         self.config = config
-        self.accel_config = config.get("acceleration", {"enabled": False})
+        self.ai_config = config.get("ai_classification", {})
         self.power_manager = PowerManager(config)
         self.recommender = HardwareRecommender(config)
         self.destination_base = config.get("destination_base_folder", "data/sorted")
-        self.ai_config = config.get("ai_classification", {})
         self.fallback_rules = config.get("fallback_rules", {})
 
-
-        if self.accel_config.get("enabled", False) and self.accel_config.get("provider") == "auto":
-            on_battery = self.power_manager.is_on_battery()
-            p, d = self.recommender.get_best_acceleration(on_battery)
-            self.accel_config["provider"] = p
-            self.accel_config["device"] = d
-            logger.info(
-                f"[bold cyan][AUTO][/bold cyan] Hardware detetado. Usando: "
-                f"[yellow]{p.upper()}[/yellow] no [yellow]{d.upper()}[/yellow] "
-                f"(Bateria: [magenta]{on_battery}[/magenta])"
-            )
+        # Configura cache persistente para evitar redownloads
+        os.environ["HF_HOME"] = os.path.abspath("models/hf_cache")
+        os.makedirs("models/hf_cache", exist_ok=True)
 
         self.ml_model = None
         self.zero_shot_classifier = None
+        self._current_model_name = None
+        self._current_mode = None
 
-        mode = self.ai_config.get("mode")
-        if self.ai_config.get("enabled", False):
-            if mode == "local_ml":
-                model_path = self.ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
-                try:
-                    self.ml_model = joblib.load(model_path)
-                    logger.info(f"Modelo de IA Local ({model_path}) carregado com sucesso!")
-                except Exception as e:
-                    logger.warning(
-                        f"Aviso: Não foi possível carregar o modelo de ML ({e}). "
-                        "Tens a certeza que executaste o script de treino?"
-                    )
-            elif mode == "zero_shot":
-                model_name = self.ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+        self._load_models()
 
-                if self.accel_config.get("enabled", False):
+    def update_config(self, new_config):
+        """Atualiza a configuração e recarrega modelos apenas se necessário."""
+        old_ai = self.config.get("ai_classification", {})
+        new_ai = new_config.get("ai_classification", {})
 
-                    provider = self.accel_config.get("provider", "auto").lower()
-                    device = self.accel_config.get("device", "auto").upper()
+        old_accel = self.config.get("acceleration", {})
+        new_accel = new_config.get("acceleration", {})
 
-                    if provider == "cuda":
-                        logger.info(f"A carregar o modelo Zero-Shot para GPU NVIDIA (CUDA)... ({model_name})")
-                        try:
-                            self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification",
-                                model=model_name,
-                                device=0,
-                            )
-                            logger.info("Modelo Zero-Shot (CUDA) carregado com sucesso!")
-                        except Exception as e:
-                            logger.error(f"Erro ao carregar CUDA ({e}). Tentando fallback para CPU...")
-                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+        self.config = new_config
+        self.ai_config = new_ai
+        self.power_manager.config = new_config
+        self.destination_base = new_config.get("destination_base_folder", "data/sorted")
+        self.fallback_rules = new_config.get("fallback_rules", {})
+        # Verifica se algo pesado mudou
+        if (old_ai.get("mode") != new_ai.get("mode") or 
+            old_ai.get("zero_shot_model") != new_ai.get("zero_shot_model") or
+            old_accel != new_accel):
+            logger.info("Alteração detectada em configurações de IA/Aceleração. Recarregando modelos...")
+            self._load_models()
+        else:
+            logger.debug("Configuração atualizada (sem necessidade de recarregar modelos de IA).")
 
-                    elif provider == "openvino" or (provider == "auto" and device != "CPU"):
+    def _load_models(self):
+        """Lógica interna de carregamento de modelos com cache local."""
+        ai_config = self.config.get("ai_classification", {})
+        accel_config = self.config.get("acceleration", {"enabled": False})
 
-                        if device == "AUTO":
-                            device = "CPU"
-                        
-                        ov_cache_dir = os.path.join("models", "ov_cache", model_name.replace("/", "_"))
-                        logger.info(f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}...")
-                        
-                        try:
-                            from optimum.intel.openvino import (
-                                OVModelForSequenceClassification,
-                            )
+        if not ai_config.get("enabled", False):
+            self.ml_model = None
+            self.zero_shot_classifier = None
+            return
 
+        mode = ai_config.get("mode")
 
-                            if os.path.exists(ov_cache_dir):
-                                logger.debug(f"Carregando modelo OpenVINO do cache: {ov_cache_dir}")
-                                model = OVModelForSequenceClassification.from_pretrained(
-                                    ov_cache_dir,
-                                    device=device,
-                                )
-                            else:
-                                logger.info(f"Exportando modelo {model_name} para OpenVINO (isso pode demorar na primeira vez)...")
-                                os.makedirs(ov_cache_dir, exist_ok=True)
-                                model = OVModelForSequenceClassification.from_pretrained(
-                                    model_name,
-                                    export=True,
-                                    device=device,
-                                    load_in_8bit=(self.accel_config.get("quantization") == "int8"),
-                                )
-                                model.save_pretrained(ov_cache_dir)
-                                logger.info(f"Modelo exportado e salvo em cache: {ov_cache_dir}")
+        # Resolução Dinâmica de Hardware
+        provider = accel_config.get("provider", "auto")
+        device = accel_config.get("device", "auto")
 
-                            tokenizer = AutoTokenizer.from_pretrained(model_name)
-                            self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification",
-                                model=model,
-                                tokenizer=tokenizer,
-                            )
-                            logger.info(f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!")
-                        except ImportError:
-                            logger.info("[INFO] Aceleração OpenVINO não instalada. Usando CPU padrão.")
-                            logger.info("[DICA] Para ativar, corre: pip install optimum[openvino]")
-                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
-                        except Exception as e:
-                            logger.exception(f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão...")
-                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+        if accel_config.get("enabled") and provider == "auto":
+            on_battery = self.power_manager.is_on_battery()
+            provider, device = self.recommender.get_best_acceleration(on_battery)
+            logger.info(f"[AUTO] Hardware: {provider.upper()} em {device.upper()} (Bateria: {on_battery})")
+
+        if mode == "local_ml":
+            model_path = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
+            try:
+                self.ml_model = joblib.load(model_path)
+                logger.info(f"Modelo de IA Local ({model_path}) carregado.")
+            except Exception as e:
+                logger.warning(f"Não foi possível carregar o modelo de ML: {e}")
+
+        elif mode == "zero_shot":
+            model_name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+
+            # Evita recarregar o mesmo modelo se já estiver na memória
+            if model_name == self._current_model_name and provider == self._current_mode:
+                return
+
+            try:
+                if accel_config.get("enabled") and provider == "cuda":
+                    logger.info(f"Carregando Zero-Shot para CUDA... ({model_name})")
+                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name, device=0)
+
+                elif accel_config.get("enabled") and provider == "openvino":
+                    ov_cache_dir = os.path.join("models", "ov_cache", model_name.replace("/", "_"))
+                    from optimum.intel.openvino import OVModelForSequenceClassification
+
+                    if os.path.exists(ov_cache_dir):
+                        logger.debug(f"Usando Cache OpenVINO: {ov_cache_dir}")
+                        model = OVModelForSequenceClassification.from_pretrained(ov_cache_dir, device=device.upper())
                     else:
+                        logger.info(f"Exportando {model_name} para OpenVINO (Cache Local)...")
+                        os.makedirs(ov_cache_dir, exist_ok=True)
+                        model = OVModelForSequenceClassification.from_pretrained(
+                            model_name, export=True, device=device.upper(),
+                            load_in_8bit=(accel_config.get("quantization") == "int8")
+                        )
+                        model.save_pretrained(ov_cache_dir)
 
-                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
+                    tokenizer = AutoTokenizer.from_pretrained(model_name)
+                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model, tokenizer=tokenizer)
                 else:
+                    logger.info(f"Carregando Zero-Shot padrão (CPU)... ({model_name})")
+                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
 
-                    logger.info(f"A carregar o modelo Zero-Shot padrão ({model_name})...")
-                    try:
-                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
-                        logger.info("Modelo Zero-Shot carregado com sucesso!")
-                    except Exception as e:
-                        logger.error(f"Aviso: Falha ao carregar modelo Zero-Shot: {e}")
+                self._current_model_name = model_name
+                self._current_mode = provider
+            except Exception as e:
+                logger.exception(f"Falha ao carregar modelo de IA: {e}")
 
     def sanitize_category(self, category_name):
         if not category_name:

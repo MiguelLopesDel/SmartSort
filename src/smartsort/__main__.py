@@ -92,8 +92,7 @@ def main():
                         new_config = load_config(config_path)
                         if new_config:
                             logger.info("Configuração atualizada/recuperada com sucesso!")
-                            processor.config = new_config
-                            processor.power_manager.config = new_config
+                            processor.update_config(new_config)
                             setup_observer(new_config)
                             last_mtime = current_mtime
                             config_error_mode = False
