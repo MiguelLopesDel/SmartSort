@@ -11,7 +11,8 @@ O **SmartSort** é um serviço de automação para Linux que monitoriza diretór
 - **Classificação por IA**:
   - **Zero-Shot Learning**: Modelos HuggingFace (ex: mDeBERTa) para classificação sem treino.
   - **Machine Learning Local**: Scikit-Learn (Naive Bayes) customizável.
-- **Aceleração por Hardware**: Preparado para inferência em GPU (NVIDIA, AMD RX, Intel ARC).
+- **Aceleração por Hardware**: Suporte total para **GPUs Integradas (Intel/AMD)** via **OpenVINO** e **ONNX Runtime**, com quantização INT8.
+- **Otimização para Notebooks**: Modo **Battery Saver** que pausa tarefas pesadas e reduz frequência de varredura ao desligar da tomada.
 - **Daemonização**: Integração total com `systemd` para execução em segundo plano.
 
 ---
