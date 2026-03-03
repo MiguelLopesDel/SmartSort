@@ -57,7 +57,7 @@ class FileProcessor:
             for filename in os.listdir(directory):
                 file_path = os.path.join(directory, filename)
                 
-                # Ignorar se for um diretório ou ficheiro oculto (como .gitkeep)
+
                 if os.path.isdir(file_path) or filename.startswith('.'):
                     continue
                 

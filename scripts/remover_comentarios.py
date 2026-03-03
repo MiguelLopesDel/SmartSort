@@ -16,7 +16,7 @@ def remove_python_comments(filepath):
 
     comments = []
     try:
-        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        tokens = tokenize.tokenize(io.BytesIO(source.encode('utf-8')).readline)
         for tok in tokens:
             if tok.type == tokenize.COMMENT:
                 comments.append((tok.start, tok.end))
