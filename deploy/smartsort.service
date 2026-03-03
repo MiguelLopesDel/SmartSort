@@ -1,0 +1,16 @@
+[Unit]
+Description=SmartSort - Organizador de Ficheiros Inteligente com IA
+After=network.target
+
+[Service]
+# O caminho para o executavel Python do ambiente virtual e o caminho do script
+ExecStart=/workspaces/SmartSort/venv/bin/python -u /workspaces/SmartSort/src/main.py
+WorkingDirectory=/workspaces/SmartSort
+Restart=always
+RestartSec=5
+# Ajusta o utilizador conforme a maquina (ex: root, ubuntu, etc.)
+User=node
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
