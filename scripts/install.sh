@@ -134,13 +134,13 @@ instalar_dependencias() {
     if [[ "$DISTRO" == "ubuntu" || "$DISTRO" == "debian" || "$DISTRO_LIKE" == *"ubuntu"* || "$DISTRO_LIKE" == *"debian"* ]]; then
         echo "Executando apt-get..."
         sudo apt-get update
-        sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr pciutils mesa-utils
+        sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr tesseract-ocr-por pciutils mesa-utils
     elif [[ "$DISTRO" == "arch" || "$DISTRO_LIKE" == *"arch"* ]]; then
         echo "Executando pacman..."
-        sudo pacman -Sy --noconfirm --needed python python-pip git tesseract pciutils mesa-utils
+        sudo pacman -Sy --noconfirm --needed python python-pip git tesseract tesseract-data-por pciutils mesa-utils
     elif [[ "$DISTRO" == "fedora" || "$DISTRO_LIKE" == *"fedora"* ]]; then
         echo "Executando dnf..."
-        sudo dnf install -y python3 python3-pip git tesseract pciutils mesa-libGL-devel
+        sudo dnf install -y python3 python3-pip git tesseract tesseract-langpack-por pciutils mesa-libGL-devel
     else
         echo -e "${VERMELHO}Distribuição não suportada automaticamente para instalação de pacotes.${NC}"
         echo "Por favor, certifique-se de que os pacotes básicos estão instalados: python3, git, tesseract-ocr, pciutils"

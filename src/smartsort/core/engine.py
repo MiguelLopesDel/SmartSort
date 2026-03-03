@@ -64,11 +64,24 @@ class FileProcessor:
                 print(f"Ficheiro existente encontrado: {filename}")
                 self.process_file(file_path)
 
+    def log_history(self, filename, category, dest_path, confidence=None):
+        """Regista a ação num ficheiro de histórico para consulta do utilizador."""
+        history_file = os.path.join(os.path.dirname(self.destination_base), "history.log")
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        conf_info = f" [Confiança: {confidence:.2f}]" if confidence is not None else ""
+        
+        log_entry = f"[{timestamp}] {filename} -> {category}{conf_info} | Local: {dest_path}\n"
+        
+        try:
+            with open(history_file, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"Erro ao gravar no histórico: {e}")
+
     def process_file(self, file_path):
         if not os.path.exists(file_path):
             return
 
-        # SEGURANÇA: Não mover a própria pasta do projeto
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
         if os.path.abspath(file_path).startswith(project_root):
             return
@@ -84,7 +97,7 @@ class FileProcessor:
 
         print(f"\\nA processar: {filename} ({'Pasta' if os.path.isdir(file_path) else 'Ficheiro'})")
         
-        category_raw = self.classify_file(file_path, filename)
+        category_raw, confidence = self.classify_file(file_path, filename)
         category = self.sanitize_category(category_raw)
 
         target_dir = os.path.join(self.destination_base, category)
@@ -100,6 +113,7 @@ class FileProcessor:
                 
             shutil.move(file_path, destination_path)
             print(f"Sucesso: Movido para {destination_path}")
+            self.log_history(filename, category, destination_path, confidence)
         except Exception as e:
             print(f"Erro ao mover {filename}: {e}")
 
@@ -120,11 +134,13 @@ class FileProcessor:
     def extract_text_from_image(self, file_path):
         try:
             image = Image.open(file_path)
-
             text = pytesseract.image_to_string(image, lang='por')
             return text.strip()
         except Exception as e:
-            print(f"Erro ao extrair texto da imagem: {e}")
+            if "por" in str(e) or "traineddata" in str(e):
+                print(f"Aviso: Tesseract não encontrou o idioma 'por'. Por favor, instale 'tesseract-ocr-por' ou 'tesseract-data-por'.")
+            else:
+                print(f"Erro ao extrair texto da imagem: {e}")
             return ""
 
     def classify_file(self, file_path, filename):
@@ -160,50 +176,39 @@ class FileProcessor:
             print(f"Modo IA ativado: Usando ({mode}) para classificar...")
             
             try:
-
-
                 if mode == "local":
                     model = self.ai_config.get("local_model", "llama3")
                     print(f"-> Simulando inferência com IA Local (Modelo: {model})...")
                     ai_category = self.simulate_ai_classification(filename, extracted_text)
+                    return ai_category, None
                 elif mode == "local_ml" and self.ml_model:
                     print("-> A usar Modelo de ML Local (scikit-learn)...")
-
                     texto_completo = f"{filename} {extracted_text}"
-
                     previsao = self.ml_model.predict([texto_completo])
-                    ai_category = previsao[0]
+                    return previsao[0], None
                 elif mode == "zero_shot" and self.zero_shot_classifier:
                     print("-> A usar Modelo Zero-Shot HuggingFace...")
                     texto_completo = f"Ficheiro: {filename}. Conteúdo: {extracted_text}"
                     categorias = self.ai_config.get("categorias_disponiveis", ["Financas", "Trabalho", "Pessoal", "Saude", "Outros"])
-                    
-
                     texto_analise = texto_completo if extracted_text else filename
-                    
                     resultado = self.zero_shot_classifier(texto_analise, categorias)
-
                     ai_category = resultado['labels'][0]
                     confianca = resultado['scores'][0]
                     print(f"IA classificou como: {ai_category} (Confiança: {confianca:.2f})")
-                    return ai_category
+                    return ai_category, confianca
                 elif mode == "api":
                     provider = self.ai_config.get("api_provider", "gemini")
                     print(f"-> Simulando chamada de API Remota (Provider: {provider})...")
-
                     ai_category = self.simulate_ai_classification(filename, extracted_text)
+                    return ai_category, None
                 else:
                     print("-> Modo de IA desconhecido, usando fallback...")
                     ai_category = None
-                    
-                if ai_category:
-                    print(f"IA classificou como: {ai_category}")
-                    return ai_category
             except Exception as e:
                 print(f"Falha na IA: {e}. A recorrer ao fallback (regras)...")
                 
 
-        return self.fallback_rules.get(ext, "Outros")
+        return self.fallback_rules.get(ext, "Outros"), None
 
     def simulate_ai_classification(self, filename, text=""):
 
