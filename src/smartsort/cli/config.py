@@ -108,6 +108,14 @@ def cli_model(name: str):
 def cli_status():
     show_status()
 
+@app.command(name="accel")
+def cli_accel():
+    from smartsort.utils.recommender import HardwareRecommender
+    config = load_config()
+    if config:
+        rec = HardwareRecommender(config)
+        rec.show_analysis()
+
 @app.command(name="add")
 def cli_add(path: str):
     add_directory(path)
