@@ -17,32 +17,40 @@ echo -e "${VERDE}Bem-vindo ao instalador do SmartSort!${NC}"
 verificar_atualizacao() {
     echo "Verificando se há atualizações no repositório..."
     if command -v git &> /dev/null && [ -d ".git" ]; then
-        git fetch > /dev/null 2>&1
-        LOCAL=$(git rev-parse @ 2>/dev/null)
-        REMOTE=$(git rev-parse @{u} 2>/dev/null)
+        git fetch origin main > /dev/null 2>&1
+        LOCAL=$(git rev-parse HEAD 2>/dev/null)
+        REMOTE=$(git rev-parse origin/main 2>/dev/null)
         
         if [ "$LOCAL" != "$REMOTE" ] && [ -n "$REMOTE" ]; then
             echo -e "${AMARELO}Uma atualização foi encontrada no repositório.${NC}"
             read -p "Deseja baixar a atualização agora? [s/N]: " atualizar
             if [[ "$atualizar" == "s" || "$atualizar" == "S" ]]; then
-                echo "Guardando alterações locais temporariamente (stash)..."
-                git stash > /dev/null 2>&1
-                if git pull; then
-                    echo "Aplicando alterações locais de volta..."
-                    if git stash pop > /dev/null 2>&1; then
-                        echo -e "${VERDE}Alterações locais aplicadas com sucesso.${NC}"
-                    else
-                        echo -e "${AMARELO}AVISO: Conflitos detetados ao reaplicar as suas alterações.${NC}"
-                        echo "O ficheiro config/config.yaml foi corrompido com marcadores de conflito do Git."
-                        echo "Por favor, resolva os conflitos manualmente ou use 'git checkout config/config.yaml' para resetar."
+                echo "Atualizando de forma inteligente para evitar conflitos..."
+                
+                # Cancela qualquer merge/rebase pendente que esteja travando o git
+                git merge --abort > /dev/null 2>&1
+                git rebase --abort > /dev/null 2>&1
+                
+                # Backup do config.yaml do usuário (único arquivo que ele deve mudar)
+                if [ -f "config/config.yaml" ]; then
+                    cp "config/config.yaml" "config/config.yaml.bak"
+                    echo "Backup da configuração criado."
+                fi
+
+                # Força a atualização para o estado da origin/main
+                if git reset --hard origin/main; then
+                    # Restaura o config do usuário
+                    if [ -f "config/config.yaml.bak" ]; then
+                        mv "config/config.yaml.bak" "config/config.yaml"
+                        echo "Configuração pessoal restaurada com sucesso."
                     fi
-                    echo -e "${VERDE}Atualização concluída. Reiniciando o instalador...${NC}"
+                    
+                    echo -e "${VERDE}Atualização concluída com sucesso.${NC}"
+                    echo -e "${VERDE}Reiniciando o instalador...${NC}"
                     exec "$0" "--skip-update"
                 else
-                    echo -e "${VERMELHO}ERRO: Falha crítica ao atualizar via git pull.${NC}"
-                    echo "O repositório tem conflitos que precisam de ser resolvidos manualmente."
-                    echo "Sugestão: git merge --abort && git checkout config/config.yaml && git pull"
-                    git stash pop > /dev/null 2>&1
+                    echo -e "${VERMELHO}ERRO: Falha crítica ao resetar o repositório para a versão mais nova.${NC}"
+                    echo "Tente rodar: git fetch && git reset --hard origin/main manualmente."
                     exit 1
                 fi
             fi
@@ -50,7 +58,7 @@ verificar_atualizacao() {
             echo "O repositório já está atualizado."
         fi
     else
-         echo "Este diretório não é um repositório git ou o git não está instalado. Pulando a verificação de atualizações."
+         echo "Pulando verificação de atualizações (não é um repo git)."
     fi
 }
 
