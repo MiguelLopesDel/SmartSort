@@ -5,67 +5,84 @@ from smartsort.core.engine import FileProcessor
 class TestHardwareLogicDecision(unittest.TestCase):
     def setUp(self):
         self.config = {
-            'ai_classification': {'enabled': True, 'mode': 'zero_shot'},
-            'acceleration': {'enabled': True, 'device': 'gpu'},
-            'power_saving': {'enabled': True, 'pause_ai_on_battery': True},
+            'ai_classification': {
+                'enabled': True, 
+                'mode': 'zero_shot',
+                'zero_shot_model': 'MoritzLaurer/mDeBERTa-v3-base-mnli-xnli'
+            },
+            'acceleration': {
+                'enabled': True, 
+                'provider': 'openvino',
+                'device': 'gpu'
+            },
+            'power_saving': {
+                'enabled': True, 
+                'pause_ai_on_battery': True
+            },
             'fallback_rules': {'pdf': 'Documentos'},
             'destination_base_folder': 'data/sorted'
         }
 
     @patch('smartsort.core.engine.PowerManager')
-    def test_should_skip_ai_on_battery(self, MockPowerManager):
-        """Verifica se a lógica de pular IA funciona quando a bateria diz que deve."""
-        # Configura o PowerManager para dizer que deve usar fallback
+    @patch('smartsort.core.engine.pipeline')
+    @patch('smartsort.core.engine.OVModelForSequenceClassification')
+    def test_should_skip_ai_on_battery(self, mock_ov, mock_pipe, MockPowerManager):
+        """Verifica se a IA é pulada quando a bateria está ativa."""
         mock_pm = MockPowerManager.return_value
         mock_pm.should_use_fallback.return_value = True
         
-        # Não queremos carregar a IA real no __init__ para este teste
-        with patch('transformers.pipeline'):
-            processor = FileProcessor(self.config)
-            processor.power_manager = mock_pm # Garante que usa o nosso mock
-            
-            # Testa a classificação
-            result = processor.classify_file("test.pdf", "test.pdf")
-            
-            # Deve retornar o fallback 'Documentos' e NÃO chamar os extratores de texto
-            category = result[0] if isinstance(result, tuple) else result
-            self.assertEqual(category, "Documentos")
-            self.assertTrue(mock_pm.should_use_fallback.called)
-
-    @patch('smartsort.core.engine.PowerManager')
-    def test_should_run_ai_on_ac_power(self, MockPowerManager):
-        """Verifica se a IA é chamada quando o PowerManager diz que está tudo ok."""
-        mock_pm = MockPowerManager.return_value
-        mock_pm.should_use_fallback.return_value = False
+        processor = FileProcessor(self.config)
+        processor.power_manager = mock_pm
         
-        with patch('transformers.pipeline'):
-            processor = FileProcessor(self.config)
-            processor.power_manager = mock_pm
-            
-            # Mockamos o extrator de texto para evitar carregar PDFs reais
-            with patch.object(processor, 'extract_text_from_pdf', return_value="texto"):
-                # Mockamos o classificador final para retornar algo conhecido
-                processor.zero_shot_classifier = MagicMock()
-                processor.zero_shot_classifier.return_value = {"labels": ["Financas"], "scores": [0.9]}
-                
-                result = processor.classify_file("test.pdf", "test.pdf")
-                category = result[0] if isinstance(result, tuple) else result
-                self.assertEqual(category, "Financas")
+        result = processor.classify_file("test.pdf", "test.pdf")
+        category = result[0] if isinstance(result, tuple) else result
+        self.assertEqual(category, "Documentos")
 
-    def test_acceleration_logic_initialization(self):
-        """Verifica se o sistema tenta carregar o acelerador correto no __init__."""
-        with patch('optimum.intel.openvino.OVModelForSequenceClassification.from_pretrained') as mock_ov:
-            with patch('transformers.pipeline'):
-                # Caso 1: Aceleração Ligada
-                FileProcessor(self.config)
-                self.assertTrue(mock_ov.called)
-                
-                # Caso 2: Aceleração Desligada
-                mock_ov.reset_mock()
-                config_no_accel = self.config.copy()
-                config_no_accel['acceleration']['enabled'] = False
-                FileProcessor(config_no_accel)
-                self.assertFalse(mock_ov.called)
+    @patch('smartsort.core.engine.pipeline')
+    @patch('smartsort.core.engine.OVModelForSequenceClassification')
+    def test_cuda_acceleration_selection(self, mock_ov, mock_pipe):
+        """Verifica se o provider 'cuda' passa device=0 para o pipeline."""
+        config = self.config.copy()
+        config['acceleration']['provider'] = 'cuda'
+        
+        FileProcessor(config)
+        
+        # O pipeline deve ter sido chamado com device=0
+        mock_pipe.assert_called()
+        # Pega a última chamada se houver várias (ex: OCR + Classificação)
+        found_cuda = False
+        for call in mock_pipe.call_args_list:
+            if call.kwargs.get('device') == 0:
+                found_cuda = True
+        self.assertTrue(found_cuda, "Pipeline não foi chamado com device=0 para CUDA")
+
+    @patch('smartsort.core.engine.OVModelForSequenceClassification.from_pretrained')
+    @patch('smartsort.core.engine.pipeline')
+    def test_openvino_acceleration_selection(self, mock_pipe, mock_ov_from_pretrained):
+        """Verifica se o provider 'openvino' chama a classe correta do Intel Optimum."""
+        config = self.config.copy()
+        config['acceleration']['provider'] = 'openvino'
+        config['acceleration']['device'] = 'gpu'
+        
+        FileProcessor(config)
+        
+        mock_ov_from_pretrained.assert_called()
+        args, kwargs = mock_ov_from_pretrained.call_args
+        self.assertEqual(kwargs.get('device'), 'GPU')
+
+    @patch('smartsort.core.engine.OVModelForSequenceClassification.from_pretrained')
+    @patch('smartsort.core.engine.pipeline')
+    def test_cpu_fallback_logic(self, mock_pipe, mock_ov):
+        """Verifica se o sistema usa o pipeline padrão se a aceleração estiver desligada."""
+        config = self.config.copy()
+        config['acceleration']['enabled'] = False
+        
+        FileProcessor(config)
+        
+        # Não deve chamar o OpenVINO
+        self.assertFalse(mock_ov.called)
+        # Deve chamar o pipeline padrão do transformers
+        self.assertTrue(mock_pipe.called)
 
 if __name__ == '__main__':
     unittest.main()

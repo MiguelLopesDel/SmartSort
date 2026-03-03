@@ -1,6 +1,7 @@
 import os
 import yaml
 import typer
+import psutil
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -21,7 +22,7 @@ def load_config():
 def save_config(config):
     with open(CONFIG_PATH, "w") as f:
         yaml.safe_dump(config, f, sort_keys=False, default_flow_style=False)
-    console.print("[green]Sucesso:[/green] Configuração atualizada com sucesso!")
+    console.print("[green]Sucesso:[/green] Configuração atualizada!")
 
 @app.command()
 def show():
@@ -42,11 +43,13 @@ def show():
     ai = config.get("ai_classification", {})
     table.add_row("IA", "Enabled", str(ai.get("enabled", False)))
     table.add_row("IA", "Modo", ai.get("mode", ""))
+    table.add_row("IA", "Modelo", ai.get("zero_shot_model", "Default"))
     
     # Aceleração
     accel = config.get("acceleration", {})
-    table.add_row("Hardware", "Aceleração (GPU)", str(accel.get("enabled", False)))
-    table.add_row("Hardware", "Dispositivo", accel.get("device", "cpu"))
+    table.add_row("Hardware", "Aceleração Ativa", str(accel.get("enabled", False)))
+    table.add_row("Hardware", "Provider", accel.get("provider", "auto"))
+    table.add_row("Hardware", "Device", accel.get("device", "cpu"))
     
     # Bateria
     power = config.get("power_saving", {})
@@ -56,17 +59,67 @@ def show():
     console.print(table)
 
 @app.command()
+def model(name: str):
+    """Troca o modelo de Zero-Shot Classification (HuggingFace)."""
+    config = load_config()
+    if "ai_classification" not in config: config["ai_classification"] = {}
+    config["ai_classification"]["zero_shot_model"] = name
+    save_config(config)
+    console.print(f"Modelo alterado para: [cyan]{name}[/cyan]")
+
+@app.command()
+def accel(provider: str = "auto", device: str = "gpu", enabled: bool = True):
+    """Configura aceleração (provider: cuda, openvino, cpu | device: gpu, cpu)."""
+    config = load_config()
+    if "acceleration" not in config: config["acceleration"] = {}
+    config["acceleration"]["enabled"] = enabled
+    config["acceleration"]["provider"] = provider.lower()
+    config["acceleration"]["device"] = device.lower()
+    save_config(config)
+    console.print(Panel(f"Aceleração: [bold]{'LIGADA' if enabled else 'DESLIGADA'}[/bold]\nProvider: {provider}\nDevice: {device}"))
+
+@app.command()
+def status():
+    """Exibe o status do hardware e bateria detectado pelo sistema."""
+    battery = psutil.sensors_battery()
+    
+    status_table = Table(title="Status do Hardware (Real-Time)", border_style="magenta")
+    status_table.add_column("Componente", style="bold white")
+    status_table.add_column("Estado", style="cyan")
+
+    if battery:
+        plugged = "Conectado" if battery.power_plugged else "Na Bateria"
+        color = "green" if battery.power_plugged else "yellow"
+        status_table.add_row("Bateria", f"{battery.percent}% ({plugged})", style=color)
+    else:
+        status_table.add_row("Bateria", "Não detectada (Desktop?)")
+
+    # Simples detecção de GPU via processos ou psutil (apenas exemplo)
+    status_table.add_row("CPU Usage", f"{psutil.cpu_percent()}%")
+    status_table.add_row("RAM Usage", f"{psutil.virtual_memory().percent}%")
+    
+    console.print(status_table)
+
+@app.command()
+def battery_mode(on: bool = True):
+    """Ativa ou desativa rapidamente o modo de economia de energia."""
+    config = load_config()
+    if "power_saving" not in config: config["power_saving"] = {}
+    config["power_saving"]["enabled"] = on
+    save_config(config)
+    status = "[green]ATIVADO[/green]" if on else "[red]DESATIVADO[/red]"
+    console.print(f"Modo de Economia de Energia: {status}")
+
+@app.command()
 def add_dir(path: str):
     """Adiciona um novo diretório para o SmartSort vigiar."""
     config = load_config()
     dirs = config.get("directories_to_watch", [])
-    
     full_path = os.path.abspath(path)
     if full_path not in dirs:
         dirs.append(full_path)
         config["directories_to_watch"] = dirs
         save_config(config)
-        console.print(f"Diretório [cyan]{full_path}[/cyan] adicionado à lista.")
     else:
         console.print("[yellow]Aviso:[/yellow] Este diretório já está sendo vigiado.")
 
@@ -75,58 +128,13 @@ def rm_dir(path: str):
     """Remove um diretório da lista de vigilância."""
     config = load_config()
     dirs = config.get("directories_to_watch", [])
-    
     full_path = os.path.abspath(path)
     if full_path in dirs:
         dirs.remove(full_path)
         config["directories_to_watch"] = dirs
         save_config(config)
-        console.print(f"Diretório [cyan]{full_path}[/cyan] removido.")
     else:
-        # Tenta remover pelo nome parcial se o abspath não bater
-        found = False
-        for d in dirs:
-            if path in d:
-                dirs.remove(d)
-                found = True
-                break
-        if found:
-            save_config(config)
-        else:
-            console.print("[red]Erro:[/red] Diretório não encontrado na lista.")
-
-@app.command()
-def set(key: str, value: str):
-    """Altera uma configuração específica (ex: acceleration.enabled true)."""
-    config = load_config()
-    
-    # Converte valores booleanos
-    if value.lower() == "true": value = True
-    elif value.lower() == "false": value = False
-    elif value.isdigit(): value = int(value)
-    
-    keys = key.split(".")
-    target = config
-    
-    # Navega pelas sub-chaves (ex: ai_classification.enabled)
-    for k in keys[:-1]:
-        if k not in target:
-            target[k] = {}
-        target = target[k]
-    
-    target[keys[-1]] = value
-    save_config(config)
-    console.print(f"Chave [yellow]{key}[/yellow] definida para [cyan]{value}[/cyan]")
-
-@app.command()
-def battery(on: bool = True):
-    """Ativa ou desativa rapidamente o modo de economia de energia."""
-    config = load_config()
-    if "power_saving" not in config: config["power_saving"] = {}
-    config["power_saving"]["enabled"] = on
-    save_config(config)
-    status = "[green]ATIVADO[/green]" if on else "[red]DESATIVADO[/red]"
-    console.print(Panel(f"Modo de Economia de Energia: {status}"))
+        console.print("[red]Erro:[/red] Diretório não encontrado.")
 
 if __name__ == "__main__":
     app()

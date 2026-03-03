@@ -40,7 +40,11 @@ chmod +x scripts/install.sh
 ## 💻 Requisitos de Sistema
 
 - **SO**: Linux (Distribuições baseadas em Debian, Arch ou Fedora).
-- **GPU**: GPU dedicada obrigatória (NVIDIA, AMD Radeon RX ou Intel ARC) para aceleração de IA.
+- **Init System**: **systemd** (Obrigatório para o modo Daemon/Serviço).
+- **Hardware**: 
+  - **GPU Dedicada**: NVIDIA (CUDA), AMD (OpenVINO/CPU) ou Intel ARC.
+  - **GPU Integrada**: Intel Iris Xe, AMD Radeon Graphics (via OpenVINO).
+  - **CPU**: Mínimo de 4GB de RAM e suporte a instruções AVX2.
 - **OCR**: Tesseract OCR (instalado automaticamente pelo script).
 
 ---
