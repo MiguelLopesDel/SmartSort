@@ -201,8 +201,12 @@ instalar_servico() {
         sudo systemctl daemon-reload
         sudo systemctl enable smartsort.service
         sudo systemctl restart smartsort.service
+        
+        echo "Configurando atalho global para a CLI..."
+        sudo ln -sf "$PROJECT_ROOT/smartsort-cli.sh" /usr/local/bin/smartsort
+        
         echo -e "${VERDE}Serviço instalado e iniciado para o utilizador $CURRENT_USER!${NC}"
-        echo "Use 'sudo systemctl status smartsort' para ver o status."
+        echo -e "Agora você pode usar o comando '${AMARELO}smartsort${NC}' de qualquer lugar."
     else
         echo -e "${VERMELHO}Arquivo smartsort.service não encontrado! O serviço não pôde ser instalado.${NC}"
     fi
