@@ -20,7 +20,7 @@ class TestSmoke(unittest.TestCase):
         with open("config/config.yaml", "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
         
-        # Desativamos a IA no teste de fumaça para não baixar modelos no CI
+
         config["ai_classification"]["enabled"] = False
         
         try:

@@ -63,8 +63,8 @@ class TestHardwareLogicDecision(unittest.TestCase):
             return original_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=side_effect):
-            # No novo código, a exceção é capturada e logada, 
-            # e como zero_shot_classifier fica None, o pipeline não é chamado no init
+
+
             FileProcessor(config)
             self.assertFalse(mock_pipe.called)
 

@@ -23,7 +23,7 @@ class FileProcessor:
         self.destination_base = config.get("destination_base_folder", "data/sorted")
         self.fallback_rules = config.get("fallback_rules", {})
 
-        # Configura cache persistente para evitar redownloads
+
         os.environ["HF_HOME"] = os.path.abspath("models/hf_cache")
         os.makedirs("models/hf_cache", exist_ok=True)
 
@@ -47,7 +47,7 @@ class FileProcessor:
         self.power_manager.config = new_config
         self.destination_base = new_config.get("destination_base_folder", "data/sorted")
         self.fallback_rules = new_config.get("fallback_rules", {})
-        # Verifica se algo pesado mudou
+
         if (old_ai.get("mode") != new_ai.get("mode") or 
             old_ai.get("zero_shot_model") != new_ai.get("zero_shot_model") or
             old_accel != new_accel):
@@ -68,7 +68,7 @@ class FileProcessor:
 
         mode = ai_config.get("mode")
 
-        # Resolução Dinâmica de Hardware
+
         provider = accel_config.get("provider", "auto")
         device = accel_config.get("device", "auto")
 
@@ -88,7 +88,7 @@ class FileProcessor:
         elif mode == "zero_shot":
             model_name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
 
-            # Evita recarregar o mesmo modelo se já estiver na memória
+
             if model_name == self._current_model_name and provider == self._current_mode:
                 return
 
