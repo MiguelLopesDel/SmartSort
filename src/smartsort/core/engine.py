@@ -237,28 +237,25 @@ class FileProcessor:
             return self.fallback_rules.get(ext, "Outros")
 
         extracted_text = ""
+        # Contexto do nome do ficheiro (ex: Aula_01_Python.mp4 -> Aula 01 Python)
+        clean_filename = re.sub(r"[._-]", " ", filename.rsplit(".", 1)[0])
+
         if ext == "pdf":
             print(f"A extrair texto do PDF {filename}...")
             extracted_text = self.extract_text_from_pdf(file_path)
-            if extracted_text:
-                print(f"Texto extraído: {extracted_text[:100]}...")
-            else:
-                print("Nenhum texto encontrado no PDF (talvez seja uma imagem).")
         elif ext in ["jpg", "jpeg", "png"]:
             print(f"A extrair texto da imagem {filename} via OCR...")
             extracted_text = self.extract_text_from_image(file_path)
-            if extracted_text:
-                print(f"Texto extraído: {extracted_text[:100]}...")
-            else:
-                print("Nenhum texto encontrado na imagem.")
         elif ext in ["txt", "md", "csv"]:
             print(f"A extrair texto do ficheiro de texto {filename}...")
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     extracted_text = f.read()
-                    print(f"Texto extraído: {extracted_text[:100]}...")
             except Exception as e:
                 print(f"Erro ao ler texto: {e}")
+
+        # Texto rico para a IA (Nome do ficheiro + Conteúdo)
+        full_context = f"Ficheiro: {clean_filename}. Conteúdo: {extracted_text[:500]}"
 
         if self.ai_config.get("enabled", False):
             mode = self.ai_config.get("mode", "api")
@@ -272,19 +269,18 @@ class FileProcessor:
                     return ai_category, None
                 elif mode == "local_ml" and self.ml_model:
                     print("-> A usar Modelo de ML Local (scikit-learn)...")
-                    texto_completo = f"{filename} {extracted_text}"
-                    previsao = self.ml_model.predict([texto_completo])
+                    previsao = self.ml_model.predict([full_context])
                     return previsao[0], None
                 elif mode == "zero_shot" and self.zero_shot_classifier:
                     print("-> A usar Modelo Zero-Shot HuggingFace...")
-                    texto_completo = f"Ficheiro: {filename}. Conteúdo: {extracted_text}"
                     categorias = self.ai_config.get(
                         "categorias_disponiveis",
                         ["Financas", "Trabalho", "Pessoal", "Saude", "Outros"],
                     )
-                    texto_analise = texto_completo if extracted_text else filename
-                    resultado = self.zero_shot_classifier(texto_analise, categorias)
-                    ai_category = resultado["labels"][0]
+                    # Usa o contexto enriquecido (Nome + Texto)
+                    resultado = self.zero_shot_classifier(full_context, categorias)
+                    return resultado["labels"][0], resultado["scores"][0]
+
                     confianca = resultado["scores"][0]
                     print(f"IA classificou como: {ai_category} (Confiança: {confianca:.2f})")
                     return ai_category, confianca
