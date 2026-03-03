@@ -23,8 +23,10 @@ def load_config():
 
 
 def save_config(config):
-    with open(CONFIG_PATH, "w") as f:
+    temp_path = f"{CONFIG_PATH}.tmp"
+    with open(temp_path, "w") as f:
         yaml.safe_dump(config, f, sort_keys=False, default_flow_style=False)
+    os.replace(temp_path, CONFIG_PATH)
     console.print("[green]Sucesso:[/green] Configuração atualizada!")
 
 

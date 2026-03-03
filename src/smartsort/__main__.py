@@ -1,22 +1,23 @@
 import os
+import shutil
 import time
 
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from .core.engine import FileProcessor
+from smartsort.core.engine import FileProcessor
 
 
 class FileHandler(FileSystemEventHandler):
-    def __init__(self, config):
-        self.processor = FileProcessor(config)
+    def __init__(self, processor):
+        self.processor = processor
 
     def is_temporary(self, path):
-        filename = os.path.basename(path)
-
-        temp_extensions = (".part", ".crdownload", ".tmp", ".kate-swp", ".swp", ".swx")
-        if filename.startswith(".") or filename.endswith(temp_extensions) or filename.endswith("~"):
+        temp_extensions = [".part", ".tmp", ".crdownload", ".swp", ".swx"]
+        if any(path.endswith(ext) for ext in temp_extensions):
+            return True
+        if os.path.basename(path).startswith("."):
             return True
         return False
 
@@ -40,55 +41,71 @@ class ConfigHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if event.src_path.endswith("config.yaml"):
-            print("\\n--- Alteração detetada em config.yaml. A recarregar definições... ---")
+            # Pequeno delay para evitar leitura de ficheiro em processo de escrita/renomeação
+            time.sleep(0.5)
             new_config = load_config(self.config_path)
             if new_config:
-
+                print(
+                    "\n--- Alteração detetada em config.yaml. A recarregar definições... ---"
+                )
                 self.handler.processor.config = new_config
-                self.handler.processor.destination_base = new_config.get("destination_base_folder", "data/sorted")
+                self.handler.processor.destination_base = new_config.get(
+                    "destination_base_folder", "data/sorted"
+                )
 
                 self.observer.unschedule_all()
                 setup_observers(self.observer, self.handler, new_config)
 
-                self.observer.schedule(self, path=os.path.dirname(self.config_path), recursive=False)
-                print("--- Configuração atualizada com sucesso! ---\\n")
+                self.observer.schedule(
+                    self, path=os.path.dirname(self.config_path), recursive=False
+                )
+                print("--- Configuração atualizada com sucesso! ---\n")
 
 
 def load_config(config_path="config/config.yaml"):
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
-    except Exception as e:
-        print(f"Erro ao carregar o config.yaml: {e}")
-        return None
+    # Tenta carregar até 3 vezes com pequeno intervalo para lidar com race conditions
+    for attempt in range(3):
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+                if config:
+                    return config
+        except Exception:
+            if attempt < 2:
+                time.sleep(0.5)
+                continue
+    return None
 
 
 def setup_observers(observer, handler, config):
     directories = config.get("directories_to_watch", [])
     for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-            print(f"Diretório criado: {directory}")
-
-        abs_path = os.path.abspath(directory)
-        observer.schedule(handler, path=abs_path, recursive=False)
-        print(f"A monitorizar o diretório: {abs_path}")
+        if os.path.exists(directory):
+            observer.schedule(handler, path=directory, recursive=False)
+            print(f"A monitorizar o diretório: {directory}")
+        else:
+            print(f"Aviso: O diretório {directory} não existe.")
 
 
 def main():
     config_path = "config/config.yaml"
     config = load_config(config_path)
+
     if not config:
         print("Configuração inicial inválida.")
         return
 
+    processor = FileProcessor(config)
+    handler = FileHandler(processor)
     observer = Observer()
-    handler = FileHandler(config)
 
     setup_observers(observer, handler, config)
 
+    # Monitoriza mudanças no próprio ficheiro de configuração
     config_watcher = ConfigHandler(observer, config_path, handler)
-    observer.schedule(config_watcher, path=os.path.dirname(config_path), recursive=False)
+    observer.schedule(
+        config_watcher, path=os.path.dirname(config_path), recursive=False
+    )
 
     observer.start()
 
