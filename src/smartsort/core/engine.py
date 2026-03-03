@@ -45,6 +45,25 @@ class FileProcessor:
         safe_name = safe_name.strip()
         return safe_name if safe_name else "Desconhecido"
 
+    def process_existing_files(self):
+        """Varre os diretórios configurados e processa ficheiros já existentes."""
+        directories = self.config.get("directories_to_watch", [])
+        print(f"\\nA verificar ficheiros existentes em: {directories}")
+        
+        for directory in directories:
+            if not os.path.exists(directory):
+                continue
+                
+            for filename in os.listdir(directory):
+                file_path = os.path.join(directory, filename)
+                
+                # Ignorar se for um diretório ou ficheiro oculto (como .gitkeep)
+                if os.path.isdir(file_path) or filename.startswith('.'):
+                    continue
+                
+                print(f"Ficheiro existente encontrado: {filename}")
+                self.process_file(file_path)
+
     def process_file(self, file_path):
 
         if not os.path.exists(file_path):

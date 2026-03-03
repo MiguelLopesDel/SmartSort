@@ -39,6 +39,9 @@ def main():
     observer = Observer()
     handler = FileHandler(config)
 
+    # Processar ficheiros que já lá estão antes de começar a monitorizar
+    handler.processor.process_existing_files()
+
     for directory in directories:
 
         abs_path = os.path.abspath(directory)
