@@ -16,9 +16,7 @@ CONFIG_PATH = "config/config.yaml"
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
-        console.print(
-            "[red]Erro:[/red] Arquivo de configuração não encontrado em config/config.yaml"
-        )
+        console.print("[red]Erro:[/red] Arquivo de configuração não encontrado em config/config.yaml")
         raise typer.Exit()
     with open(CONFIG_PATH, "r") as f:
         return yaml.safe_load(f) or {}
@@ -44,9 +42,7 @@ def show():
     dirs = config.get("directories_to_watch", [])
     table.add_row("Monitorização", "Diretórios", "\n".join(dirs))
     table.add_row("Monitorização", "Destino", config.get("destination_base_folder", ""))
-    table.add_row(
-        "Sistema", "Sugestões Hardware", str(config.get("show_recommendations", True))
-    )
+    table.add_row("Sistema", "Sugestões Hardware", str(config.get("show_recommendations", True)))
 
     # IA
     ai = config.get("ai_classification", {})
@@ -63,9 +59,7 @@ def show():
     # Bateria
     power = config.get("power_saving", {})
     table.add_row("Energia", "Economia Bateria", str(power.get("enabled", False)))
-    table.add_row(
-        "Energia", "Bateria Crítica", f"{power.get('stop_below_percent', 0)}%"
-    )
+    table.add_row("Energia", "Bateria Crítica", f"{power.get('stop_below_percent', 0)}%")
 
     console.print(table)
 

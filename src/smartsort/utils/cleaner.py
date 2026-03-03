@@ -99,9 +99,7 @@ def remove_shell_comments(filepath):
             continue
 
         if char == "#" and not in_single_quote and not in_double_quote:
-            is_start_of_word = (
-                i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
-            )
+            is_start_of_word = i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
             if is_start_of_word:
 
                 if i == 0 and content.startswith("#!"):
@@ -142,9 +140,7 @@ def remove_shell_comments(filepath):
 
 def main():
     if len(sys.argv) < 2:
-        print(
-            "Uso: python remover_comentarios.py <arquivo_ou_diretorio> [arquivo_ou_diretorio...]"
-        )
+        print("Uso: python remover_comentarios.py <arquivo_ou_diretorio> [arquivo_ou_diretorio...]")
         sys.exit(1)
 
     targets = sys.argv[1:]

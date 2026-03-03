@@ -16,11 +16,7 @@ class FileHandler(FileSystemEventHandler):
         filename = os.path.basename(path)
 
         temp_extensions = (".part", ".crdownload", ".tmp", ".kate-swp", ".swp", ".swx")
-        if (
-            filename.startswith(".")
-            or filename.endswith(temp_extensions)
-            or filename.endswith("~")
-        ):
+        if filename.startswith(".") or filename.endswith(temp_extensions) or filename.endswith("~"):
             return True
         return False
 
@@ -44,23 +40,17 @@ class ConfigHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if event.src_path.endswith("config.yaml"):
-            print(
-                "\\n--- Alteração detetada em config.yaml. A recarregar definições... ---"
-            )
+            print("\\n--- Alteração detetada em config.yaml. A recarregar definições... ---")
             new_config = load_config(self.config_path)
             if new_config:
 
                 self.handler.processor.config = new_config
-                self.handler.processor.destination_base = new_config.get(
-                    "destination_base_folder", "data/sorted"
-                )
+                self.handler.processor.destination_base = new_config.get("destination_base_folder", "data/sorted")
 
                 self.observer.unschedule_all()
                 setup_observers(self.observer, self.handler, new_config)
 
-                self.observer.schedule(
-                    self, path=os.path.dirname(self.config_path), recursive=False
-                )
+                self.observer.schedule(self, path=os.path.dirname(self.config_path), recursive=False)
                 print("--- Configuração atualizada com sucesso! ---\\n")
 
 
@@ -98,9 +88,7 @@ def main():
     setup_observers(observer, handler, config)
 
     config_watcher = ConfigHandler(observer, config_path, handler)
-    observer.schedule(
-        config_watcher, path=os.path.dirname(config_path), recursive=False
-    )
+    observer.schedule(config_watcher, path=os.path.dirname(config_path), recursive=False)
 
     observer.start()
 

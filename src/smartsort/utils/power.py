@@ -33,9 +33,7 @@ class PowerManager:
             percent = self.get_battery_percent()
             threshold = self.config.get("stop_below_percent", 20)
             if percent < threshold:
-                self.logger.warning(
-                    f"Bateria em {percent}%. Abaixo do limite de {threshold}%. Parando."
-                )
+                self.logger.warning(f"Bateria em {percent}%. Abaixo do limite de {threshold}%. Parando.")
                 return True
         return False
 
@@ -45,9 +43,7 @@ class PowerManager:
             return False
 
         if self.is_on_battery() and self.config.get("pause_ai_on_battery", True):
-            self.logger.info(
-                "Modo Bateria Ativo: Usando regras simples de fallback para economizar energia."
-            )
+            self.logger.info("Modo Bateria Ativo: Usando regras simples de fallback para economizar energia.")
             return True
         return False
 

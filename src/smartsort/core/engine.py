@@ -39,9 +39,7 @@ class FileProcessor:
             if mode == "local_ml":
                 # ... (manter lógica local_ml ...)
 
-                model_path = self.ai_config.get(
-                    "local_ml_model_path", "models/modelo_classificador.joblib"
-                )
+                model_path = self.ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
                 try:
                     self.ml_model = joblib.load(model_path)
                     print(f"Modelo de IA Local ({model_path}) carregado com sucesso!")
@@ -51,9 +49,7 @@ class FileProcessor:
                         "Tens a certeza que executaste o script de treino?"
                     )
             elif mode == "zero_shot":
-                model_name = self.ai_config.get(
-                    "zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
-                )
+                model_name = self.ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
 
                 if self.accel_config.get("enabled", False):
                     # Configuração de Aceleração
@@ -61,9 +57,7 @@ class FileProcessor:
                     device = self.accel_config.get("device", "auto").upper()
 
                     if provider == "cuda":
-                        print(
-                            f"A carregar o modelo Zero-Shot para GPU NVIDIA (CUDA)... ({model_name})"
-                        )
+                        print(f"A carregar o modelo Zero-Shot para GPU NVIDIA (CUDA)... ({model_name})")
                         try:
                             self.zero_shot_classifier = pipeline(
                                 "zero-shot-classification",
@@ -73,19 +67,13 @@ class FileProcessor:
                             print("Modelo Zero-Shot (CUDA) carregado com sucesso!")
                         except Exception as e:
                             print(f"Erro ao carregar CUDA ({e}). Tentando fallback...")
-                            self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification", model=model_name
-                            )
+                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
 
-                    elif provider == "openvino" or (
-                        provider == "auto" and device != "CPU"
-                    ):
+                    elif provider == "openvino" or (provider == "auto" and device != "CPU"):
                         # Lógica OpenVINO já existente (Intel/AMD)
                         if device == "AUTO":
                             device = "CPU"
-                        print(
-                            f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}..."
-                        )
+                        print(f"A carregar o modelo Zero-Shot otimizado (OpenVINO) para {device}...")
                         try:
                             from optimum.intel.openvino import (
                                 OVModelForSequenceClassification,
@@ -95,9 +83,7 @@ class FileProcessor:
                                 model_name,
                                 export=True,
                                 device=device,
-                                load_in_8bit=(
-                                    self.accel_config.get("quantization") == "int8"
-                                ),
+                                load_in_8bit=(self.accel_config.get("quantization") == "int8"),
                             )
                             tokenizer = AutoTokenizer.from_pretrained(model_name)
                             self.zero_shot_classifier = pipeline(
@@ -105,38 +91,22 @@ class FileProcessor:
                                 model=model,
                                 tokenizer=tokenizer,
                             )
-                            print(
-                                f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!"
-                            )
+                            print(f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!")
                         except ImportError:
-                            print(
-                                "[INFO] Aceleração OpenVINO não instalada. Usando CPU padrão."
-                            )
-                            print(
-                                "[DICA] Para ativar, corre: pip install optimum[openvino]"
-                            )
-                            self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification", model=model_name
-                            )
+                            print("[INFO] Aceleração OpenVINO não instalada. Usando CPU padrão.")
+                            print("[DICA] Para ativar, corre: pip install optimum[openvino]")
+                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
                         except Exception as e:
-                            print(
-                                f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão..."
-                            )
-                            self.zero_shot_classifier = pipeline(
-                                "zero-shot-classification", model=model_name
-                            )
+                            print(f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão...")
+                            self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
                     else:
                         # Fallback CPU otimizado
-                        self.zero_shot_classifier = pipeline(
-                            "zero-shot-classification", model=model_name
-                        )
+                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
                 else:
                     # Modo padrão sem aceleração extra
                     print(f"A carregar o modelo Zero-Shot padrão ({model_name})...")
                     try:
-                        self.zero_shot_classifier = pipeline(
-                            "zero-shot-classification", model=model_name
-                        )
+                        self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
                         print("Modelo Zero-Shot carregado com sucesso!")
                     except Exception as e:
                         print(f"Aviso: Falha ao carregar modelo Zero-Shot: {e}")
@@ -170,15 +140,11 @@ class FileProcessor:
 
     def log_history(self, filename, category, dest_path, confidence=None):
         """Regista a ação num ficheiro de histórico para consulta do utilizador."""
-        history_file = os.path.join(
-            os.path.dirname(self.destination_base), "history.log"
-        )
+        history_file = os.path.join(os.path.dirname(self.destination_base), "history.log")
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         conf_info = f" [Confiança: {confidence:.2f}]" if confidence is not None else ""
 
-        log_entry = (
-            f"[{timestamp}] {filename} -> {category}{conf_info} | Local: {dest_path}\n"
-        )
+        log_entry = f"[{timestamp}] {filename} -> {category}{conf_info} | Local: {dest_path}\n"
 
         try:
             with open(history_file, "a", encoding="utf-8") as f:
@@ -190,9 +156,7 @@ class FileProcessor:
         if not os.path.exists(file_path):
             return
 
-        project_root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../../..")
-        )
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
         if os.path.abspath(file_path).startswith(project_root):
             return
 
@@ -206,21 +170,14 @@ class FileProcessor:
             ".swp",
             ".swx",
         )
-        if (
-            filename.startswith(".")
-            or filename.endswith(ignored_extensions)
-            or filename.endswith("~")
-        ):
+        if filename.startswith(".") or filename.endswith(ignored_extensions) or filename.endswith("~"):
             return
 
         time.sleep(2)
         if not os.path.exists(file_path):
             return
 
-        print(
-            f"\nA processar: {filename} "
-            f"({'Pasta' if os.path.isdir(file_path) else 'Ficheiro'})"
-        )
+        print(f"\nA processar: {filename} " f"({'Pasta' if os.path.isdir(file_path) else 'Ficheiro'})")
 
         category_raw, confidence = self.classify_file(file_path, filename)
         category = self.sanitize_category(category_raw)
@@ -234,9 +191,7 @@ class FileProcessor:
         try:
             if os.path.exists(destination_path):
                 base, ext = os.path.splitext(filename)
-                destination_path = os.path.join(
-                    target_dir, f"{base}_{int(time.time())}{ext}"
-                )
+                destination_path = os.path.join(target_dir, f"{base}_{int(time.time())}{ext}")
 
             shutil.move(file_path, destination_path)
             print(f"Sucesso: Movido para {destination_path}")
@@ -313,9 +268,7 @@ class FileProcessor:
                 if mode == "local":
                     model = self.ai_config.get("local_model", "llama3")
                     print(f"-> Simulando inferência com IA Local (Modelo: {model})...")
-                    ai_category = self.simulate_ai_classification(
-                        filename, extracted_text
-                    )
+                    ai_category = self.simulate_ai_classification(filename, extracted_text)
                     return ai_category, None
                 elif mode == "local_ml" and self.ml_model:
                     print("-> A usar Modelo de ML Local (scikit-learn)...")
@@ -333,18 +286,12 @@ class FileProcessor:
                     resultado = self.zero_shot_classifier(texto_analise, categorias)
                     ai_category = resultado["labels"][0]
                     confianca = resultado["scores"][0]
-                    print(
-                        f"IA classificou como: {ai_category} (Confiança: {confianca:.2f})"
-                    )
+                    print(f"IA classificou como: {ai_category} (Confiança: {confianca:.2f})")
                     return ai_category, confianca
                 elif mode == "api":
                     provider = self.ai_config.get("api_provider", "gemini")
-                    print(
-                        f"-> Simulando chamada de API Remota (Provider: {provider})..."
-                    )
-                    ai_category = self.simulate_ai_classification(
-                        filename, extracted_text
-                    )
+                    print(f"-> Simulando chamada de API Remota (Provider: {provider})...")
+                    ai_category = self.simulate_ai_classification(filename, extracted_text)
                     return ai_category, None
                 else:
                     print("-> Modo de IA desconhecido, usando fallback...")
@@ -359,15 +306,8 @@ class FileProcessor:
         name_lower = filename.lower()
         text_lower = text.lower()
 
-        if (
-            "fatura" in name_lower
-            or "recibo" in name_lower
-            or "fatura" in text_lower
-            or "recibo" in text_lower
-        ):
+        if "fatura" in name_lower or "recibo" in name_lower or "fatura" in text_lower or "recibo" in text_lower:
             return "Financas"
-        elif (
-            "relatorio" in name_lower or "cv" in name_lower or "relatório" in text_lower
-        ):
+        elif "relatorio" in name_lower or "cv" in name_lower or "relatório" in text_lower:
             return "Trabalho"
         return None

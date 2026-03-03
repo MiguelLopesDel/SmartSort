@@ -69,12 +69,8 @@ class TestBatteryOptimization(unittest.TestCase):
 
         processor = FileProcessor(self.config)
 
-        with patch.object(
-            FileProcessor, "extract_text_from_pdf", return_value="Texto de Teste"
-        ):
-            with patch.object(
-                FileProcessor, "simulate_ai_classification", return_value="Financas"
-            ):
+        with patch.object(FileProcessor, "extract_text_from_pdf", return_value="Texto de Teste"):
+            with patch.object(FileProcessor, "simulate_ai_classification", return_value="Financas"):
                 result = processor.classify_file("teste.pdf", "teste.pdf")
                 category = result[0] if isinstance(result, (tuple, list)) else result
                 self.assertEqual(category, "Financas")
