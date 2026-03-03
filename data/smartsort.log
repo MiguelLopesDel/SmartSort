@@ -1,3 +1,5 @@
 
 2026-03-03 19:24:03,799 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]tests/test_cleaner_advanced.py[/blue]
 2026-03-03 19:24:03,802 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]tests/test_engine_advanced.py[/blue]
+2026-03-03 19:33:09,818 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]tests/test_main.py[/blue]
+2026-03-03 19:33:09,821 - smartsort - INFO - cleaner.py:68 - Comentários removidos (Python): [blue]tests/test_tui_final.py[/blue]

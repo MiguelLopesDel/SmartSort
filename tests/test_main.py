@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from smartsort.__main__ import load_config, SmartSortHandler, DEFAULT_CONFIG
+from smartsort.__main__ import load_config, SmartSortHandler, DEFAULT_CONFIG, main
 
 class TestMain(unittest.TestCase):
     
@@ -23,6 +23,24 @@ class TestMain(unittest.TestCase):
         
         handler.on_created(event)
         mock_processor.process_file.assert_called_with("test.txt")
+
+    @patch("smartsort.__main__.load_config")
+    @patch("smartsort.__main__.FileProcessor")
+    @patch("smartsort.__main__.Observer")
+    @patch("time.sleep", side_effect=KeyboardInterrupt)
+    @patch("os.path.exists", return_value=True)
+    def test_main_loop_keyboard_interrupt(self, mock_exists, mock_sleep, mock_obs, mock_proc, mock_load):
+
+        mock_load.return_value = DEFAULT_CONFIG
+        
+
+        try:
+            main()
+        except KeyboardInterrupt:
+            pass
+        
+        mock_obs.return_value.start.assert_called()
+        mock_obs.return_value.stop.assert_called()
 
 if __name__ == "__main__":
     unittest.main()
