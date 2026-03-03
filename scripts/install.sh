@@ -105,13 +105,17 @@ detectar_gpu() {
 
 
     if [ "$HAS_DEDICATED" = false ]; then
-        echo -e "${VERMELHO}Nenhuma GPU dedicada suportada (AMD RX, NVIDIA, Intel ARC) foi detectada.${NC}"
-        echo -e "${AMARELO}Encontrado no sistema: ${GPU_INFO}${NC}"
-        echo -e "${VERMELHO}Por enquanto o programa não é suportado para rodar apenas em CPU ou GPU integrada. Vou resolver isso depois.${NC}"
-        return 1 2>/dev/null || exit 1
+        echo -e "${AMARELO}Nenhuma GPU dedicada detectada. O SmartSort usará a CPU/iGPU.${NC}"
+        return 0
     fi
-
     echo -e "GPU Dedicada detectada: ${VERDE}${GPU_VENDOR}${NC}"
+}
+
+gerar_recomendacoes() {
+    echo "Analisando hardware para otimização..."
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+    python3 src/smartsort/utils/recommender.py
+}
     
     if [ "$GPU_VENDOR" = "NVIDIA" ]; then
         echo -e "Driver NVIDIA em uso: ${AMARELO}${NVIDIA_DRIVER}${NC}"
@@ -190,9 +194,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         verificar_atualizacao
     fi
     detectar_distro
-    detectar_gpu || exit 1
+    detectar_gpu
     instalar_dependencias
     configurar_python
+    gerar_recomendacoes
     instalar_servico
     echo -e "${VERDE}Instalação concluída com sucesso!${NC}"
 fi

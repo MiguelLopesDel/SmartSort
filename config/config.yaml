@@ -2,6 +2,9 @@ directories_to_watch:
   - "data/downloads_test"
 destination_base_folder: "data/sorted"
 
+# Configurações Gerais
+show_recommendations: true  # Mostra sugestões de hardware durante instalação/update
+
 # Configurações de Inteligência Artificial para classificação
 ai_classification:
   enabled: true

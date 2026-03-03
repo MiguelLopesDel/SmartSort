@@ -38,6 +38,7 @@ def show():
     dirs = config.get("directories_to_watch", [])
     table.add_row("Monitorização", "Diretórios", "\n".join(dirs))
     table.add_row("Monitorização", "Destino", config.get("destination_base_folder", ""))
+    table.add_row("Sistema", "Sugestões Hardware", str(config.get("show_recommendations", True)))
     
     # IA
     ai = config.get("ai_classification", {})
