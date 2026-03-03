@@ -182,9 +182,9 @@ configurar_python() {
     source venv/bin/activate
     
     echo "Instalando requisitos essenciais do Python..."
-    pip install --upgrade pip
+    pip install --upgrade pip || { echo -e "${VERMELHO}Erro ao atualizar pip.${NC}"; exit 1; }
     if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt
+        pip install -r requirements.txt || { echo -e "${VERMELHO}ERRO CRÍTICO: Falha ao instalar dependências essenciais. Verifique o espaço em disco.${NC}"; exit 1; }
     fi
 
     echo "Tentando instalar módulos de aceleração de hardware (opcional)..."
