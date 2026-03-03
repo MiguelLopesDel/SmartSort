@@ -1,0 +1,12 @@
+node_modules/
+.git/
+dist/
+build/
+.next/
+target/          # Rust, Java etc.
+venv/            # Python virtualenv
+__pycache__/
+*.log
+coverage/
+.angular/
+.cache/

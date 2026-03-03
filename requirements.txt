@@ -1,0 +1,8 @@
+watchdog
+pyyamlpypdf
+pytesseract
+scikit-learn
+joblib
+transformers
+torch
+pytest
