@@ -23,7 +23,7 @@ verificar_atualizacao() {
             if [[ "$atualizar" == "s" || "$atualizar" == "S" ]]; then
                 git pull
                 echo -e "${VERDE}Atualização concluída. Reiniciando o instalador com a versão mais recente...${NC}"
-                exec "$0"
+                exec "$0" "--skip-update"
             fi
         else
             echo "O repositório já está atualizado."
@@ -186,7 +186,9 @@ instalar_servico() {
 
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    verificar_atualizacao
+    if [[ "$1" != "--skip-update" ]]; then
+        verificar_atualizacao
+    fi
     detectar_distro
     detectar_gpu || exit 1
     instalar_dependencias
