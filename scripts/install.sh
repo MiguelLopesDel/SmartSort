@@ -172,12 +172,19 @@ configurar_python() {
     fi
     source venv/bin/activate
     
-    echo "Instalando requisitos do Python..."
+    echo "Instalando requisitos essenciais do Python..."
     pip install --upgrade pip
     if [ -f "requirements.txt" ]; then
         pip install -r requirements.txt
-    else
-         echo -e "${AMARELO}Arquivo requirements.txt não encontrado! Pulando instalação de pacotes Python.${NC}"
+    fi
+
+    echo "Tentando instalar módulos de aceleração de hardware (opcional)..."
+    if [ -f "requirements-accel.txt" ]; then
+        # Tenta instalar um a um para não quebrar se um falhar
+        while IFS= read -r line || [ -n "$line" ]; do
+            echo "Instalando $line..."
+            pip install "$line" || echo -e "${AMARELO}Aviso: Não foi possível instalar $line. Aceleração para este módulo estará desativada.${NC}"
+        done < "requirements-accel.txt"
     fi
 }
 

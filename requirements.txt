@@ -13,7 +13,5 @@ black
 isort
 flake8
 psutil>=5.9.0
-onnxruntime-openvino
-optimum[openvino,nncf]
 typer
 rich

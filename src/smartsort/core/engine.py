@@ -98,6 +98,16 @@ class FileProcessor:
                             print(
                                 f"Modelo Zero-Shot (OpenVINO) carregado com sucesso em {device}!"
                             )
+                        except ImportError:
+                            print(
+                                "[INFO] Aceleração OpenVINO não instalada. Usando CPU padrão."
+                            )
+                            print(
+                                "[DICA] Para ativar, corre: pip install optimum[openvino]"
+                            )
+                            self.zero_shot_classifier = pipeline(
+                                "zero-shot-classification", model=model_name
+                            )
                         except Exception as e:
                             print(
                                 f"Erro ao carregar OpenVINO ({e}). Tentando modo padrão..."
