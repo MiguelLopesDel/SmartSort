@@ -140,30 +140,30 @@ def test_ai_classification_mock(setup_teardown_folders):
 def test_process_existing_files(mock_config, setup_teardown_folders):
     processor = FileProcessor(mock_config)
     
-    # Criar um ficheiro normal que deve ser movido
+
     regular_file = os.path.join("test_downloads", "documento.pdf")
     with open(regular_file, "w") as f:
         f.write("Conteudo pdf fake")
         
-    # Criar um ficheiro oculto que deve ser ignorado
+
     hidden_file = os.path.join("test_downloads", ".gitkeep")
     with open(hidden_file, "w") as f:
         f.write("")
         
-    # Criar um diretorio dentro do target que deve ser ignorado
+
     sub_dir = os.path.join("test_downloads", "subpasta")
     os.makedirs(sub_dir, exist_ok=True)
     
-    # Criar um ficheiro fora do diretorio configurado (para garantir que nao mexe)
+
     os.makedirs("test_other_dir", exist_ok=True)
     outside_file = os.path.join("test_other_dir", "nao_mexer.txt")
     with open(outside_file, "w") as f:
         f.write("Fica aqui")
         
-    # Executar o processo
+
     processor.process_existing_files()
     
-    # Verificar resultados
+
     assert not os.path.exists(regular_file), "Ficheiro regular devia ter sido movido"
     assert os.path.exists(os.path.join("test_destination", "Documentos_Teste", "documento.pdf")), "Ficheiro devia estar no destino"
     
@@ -171,5 +171,5 @@ def test_process_existing_files(mock_config, setup_teardown_folders):
     assert os.path.exists(sub_dir), "Diretorios internos nao devem ser tocados"
     assert os.path.exists(outside_file), "Ficheiros fora do alvo nao devem ser tocados"
     
-    # Limpeza do ficheiro externo criado pro teste
+
     shutil.rmtree("test_other_dir")

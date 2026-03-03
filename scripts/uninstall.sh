@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Mudar para a raiz do projeto e validar localização
+
 cd "$(dirname "$0")/.."
 ROOT_DIR=$(pwd)
 
@@ -9,7 +9,7 @@ AMARELO='\033[1;33m'
 VERMELHO='\033[0;31m'
 NC='\033[0m'
 
-# SEGURANÇA: Validar se estamos mesmo no diretório do SmartSort
+
 if [ ! -f "src/smartsort/__main__.py" ]; then
     echo -e "${VERMELHO}ERRO CRÍTICO: Não foi possível validar a raiz do projeto SmartSort em $ROOT_DIR.${NC}"
     echo "A desinstalação foi abortada por segurança para evitar apagar ficheiros incorretos."
@@ -18,7 +18,7 @@ fi
 
 echo -e "${AMARELO}Bem-vindo ao desinstalador do SmartSort! (Diretório: $ROOT_DIR)${NC}"
 
-# 1. Remover o Serviço Systemd
+
 remover_servico() {
     echo "A remover o serviço systemd..."
     if [ -f "/etc/systemd/system/smartsort.service" ]; then
@@ -32,7 +32,7 @@ remover_servico() {
     fi
 }
 
-# 2. Remover o Ambiente Virtual
+
 remover_venv() {
     echo "A remover o ambiente virtual (venv)..."
     if [ -d "$ROOT_DIR/venv" ]; then
@@ -41,7 +41,7 @@ remover_venv() {
     fi
 }
 
-# 3. Remover Configurações (Opcional)
+
 remover_config() {
     read -p "Deseja remover as configurações em config/config.yaml? [s/N]: " remover
     if [[ "$remover" == "s" || "$remover" == "S" ]]; then
@@ -52,7 +52,7 @@ remover_config() {
     fi
 }
 
-# 4. Remover Dados Ordenados (Opcional)
+
 remover_dados() {
     echo -e "${AMARELO}AVISO: A pasta de dados ordenados (data/sorted) contém os seus ficheiros organizados.${NC}"
     read -p "Deseja remover DEFINITIVAMENTE a pasta data/sorted? [s/N]: " remover
@@ -64,7 +64,7 @@ remover_dados() {
     fi
 }
 
-# Execução Principal
+
 read -p "Tem a certeza que deseja desinstalar o SmartSort? [s/N]: " confirmar
 if [[ "$confirmar" == "s" || "$confirmar" == "S" ]]; then
     remover_servico

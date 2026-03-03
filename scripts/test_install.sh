@@ -10,14 +10,14 @@ NC='\033[0m'
 echo "Iniciando testes do script install.sh..."
 
 
-# Funções de mock para comandos do sistema
-# Estas funções substituem os comandos reais durante o teste
+
+
 lspci() { echo "$MOCK_LSPCI_OUTPUT"; }
 lsmod() { echo "$MOCK_LSMOD_OUTPUT"; }
 modinfo() { echo "$MOCK_MODINFO_OUTPUT"; }
-sudo() { shift; "$@"; } # Mock do sudo para não pedir pass em testes
+sudo() { shift; "$@"; }
 
-# Mock do comando 'command -v' injetando lógica de teste
+
 command() {
     if [[ "$1" == "-v" ]]; then
         [[ "$MOCK_COMMAND_V_FAIL" == "true" ]] && return 1
@@ -26,12 +26,12 @@ command() {
     builtin command "$@"
 }
 
-# Criar um ambiente de teste isolado para os ficheiros do sistema
+
 MOCK_ROOT=$(mktemp -d)
 mkdir -p "$MOCK_ROOT/etc" "$MOCK_ROOT/usr/lib"
 
-# Injetar o MOCK_ROOT na lógica de detecção do script de instalação
-# Vamos ler o install.sh e criar uma versão "testável" temporária
+
+
 sed "s|/etc/os-release|$MOCK_ROOT/etc/os-release|g; s|/usr/lib/os-release|$MOCK_ROOT/usr/lib/os-release|g" scripts/install.sh > scripts/install_testable.sh
 source scripts/install_testable.sh
 
