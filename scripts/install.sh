@@ -21,9 +21,17 @@ verificar_atualizacao() {
             echo -e "${AMARELO}Uma atualização foi encontrada no repositório.${NC}"
             read -p "Deseja baixar a atualização agora? [s/N]: " atualizar
             if [[ "$atualizar" == "s" || "$atualizar" == "S" ]]; then
-                git pull
-                echo -e "${VERDE}Atualização concluída. Reiniciando o instalador com a versão mais recente...${NC}"
-                exec "$0" "--skip-update"
+                echo "Guardando alterações locais temporariamente (stash)..."
+                git stash > /dev/null 2>&1
+                if git pull; then
+                    echo "Aplicando alterações locais de volta..."
+                    git stash pop > /dev/null 2>&1
+                    echo -e "${VERDE}Atualização concluída. Reiniciando o instalador...${NC}"
+                    exec "$0" "--skip-update"
+                else
+                    echo -e "${VERMELHO}Falha ao atualizar via git pull. Por favor, verifique conflitos manualmente.${NC}"
+                    git stash pop > /dev/null 2>&1
+                fi
             fi
         else
             echo "O repositório já está atualizado."
