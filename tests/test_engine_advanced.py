@@ -22,7 +22,7 @@ class TestEngineAdvanced(unittest.TestCase):
         processor = FileProcessor(self.config)
         with patch.object(processor, "_load_models") as mock_load:
             new_config = self.config.copy()
-            # Garante que os modos são diferentes
+
             new_config["ai_classification"] = {"mode": "local_ml", "enabled": True}
             processor.update_config(new_config)
             mock_load.assert_called()

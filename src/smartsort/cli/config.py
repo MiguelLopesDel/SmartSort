@@ -64,7 +64,7 @@ def show_status():
     from smartsort.utils.recommender import HardwareRecommender
 
     pm = PowerManager(config)
-    recommender = HardwareRecommender(config)
+    rec = HardwareRecommender(config)
 
     status_table = Table(title="Status do Sistema")
     status_table.add_column("Componente", style="cyan")
@@ -73,7 +73,7 @@ def show_status():
     on_battery = pm.is_on_battery()
     status_table.add_row("Bateria", "Sim" if on_battery else "Não (Tomada)")
 
-    p, d = recommender.get_best_acceleration(on_battery)
+    p, d = rec.get_best_acceleration(on_battery)
     status_table.add_row("Hardware Recomendado", f"{p.upper()} em {d.upper()}")
 
     console.print(status_table)
@@ -95,7 +95,6 @@ def add_directory(path: str):
     config.setdefault("directories_to_watch", []).append(full_path)
     if save_config(config):
         console.print(f"[green]Sucesso:[/green] Diretório [cyan]{full_path}[/cyan] adicionado!")
-
 
 @app.command(name="show")
 def cli_show():
@@ -119,4 +118,8 @@ def cli_tui():
     start_tui()
 
 if __name__ == "__main__":
-    app()
+    if len(sys.argv) == 1:
+        from smartsort.cli.tui import start_tui
+        start_tui()
+    else:
+        app()

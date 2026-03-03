@@ -32,7 +32,8 @@ def setup_logger(name="smartsort", log_level=logging.INFO, log_file="data/smarts
     rich_handler.setLevel(log_level)
     logger.addHandler(rich_handler)
 
-    if "pytest" not in sys.modules:
+    is_testing = "pytest" in sys.modules or os.environ.get("PYTEST_CURRENT_TEST")
+    if not is_testing:
         try:
             log_dir = os.path.dirname(log_file)
             if log_dir and not os.path.exists(log_dir):
