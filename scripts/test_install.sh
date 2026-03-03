@@ -10,52 +10,60 @@ NC='\033[0m'
 echo "Iniciando testes do script install.sh..."
 
 
-export MOCK_OS_RELEASE="/tmp/os-release-mock"
-export MOCK_LSPCI_OUTPUT=""
-export MOCK_LSMOD_OUTPUT=""
-export MOCK_MODINFO_OUTPUT=""
-export MOCK_COMMAND_V=""
+# Funções de mock para comandos do sistema
+# Estas funções substituem os comandos reais durante o teste
+lspci() { echo "$MOCK_LSPCI_OUTPUT"; }
+lsmod() { echo "$MOCK_LSMOD_OUTPUT"; }
+modinfo() { echo "$MOCK_MODINFO_OUTPUT"; }
+sudo() { shift; "$@"; } # Mock do sudo para não pedir pass em testes
 
-
+# Mock do comando 'command -v' injetando lógica de teste
 command() {
     if [[ "$1" == "-v" ]]; then
-        if [[ "$MOCK_COMMAND_V" == "false" ]]; then
-            return 1
-        fi
+        [[ "$MOCK_COMMAND_V_FAIL" == "true" ]] && return 1
         return 0
     fi
     builtin command "$@"
 }
 
-lspci() {
-    echo "$MOCK_LSPCI_OUTPUT"
-}
+# Criar um ambiente de teste isolado para os ficheiros do sistema
+MOCK_ROOT=$(mktemp -d)
+mkdir -p "$MOCK_ROOT/etc" "$MOCK_ROOT/usr/lib"
 
-lsmod() {
-    echo "$MOCK_LSMOD_OUTPUT"
-}
-
-modinfo() {
-    echo "$MOCK_MODINFO_OUTPUT"
-}
-
-
-source scripts/install.sh
+# Injetar o MOCK_ROOT na lógica de detecção do script de instalação
+# Vamos ler o install.sh e criar uma versão "testável" temporária
+sed "s|/etc/os-release|$MOCK_ROOT/etc/os-release|g; s|/usr/lib/os-release|$MOCK_ROOT/usr/lib/os-release|g" scripts/install.sh > scripts/install_testable.sh
+source scripts/install_testable.sh
 
 test_distro_ubuntu() {
-    echo -n "Testando detecção de Ubuntu... "
-    cat << EOF > "$MOCK_OS_RELEASE"
+    echo -n "Testando detecção de Ubuntu via /etc/os-release... "
+    cat << EOF > "$MOCK_ROOT/etc/os-release"
 ID=ubuntu
-ID_LIKE=debian
 PRETTY_NAME="Ubuntu 22.04 LTS"
 EOF
+    rm -f "$MOCK_ROOT/usr/lib/os-release"
     
     OUTPUT=$(detectar_distro)
     if echo "$OUTPUT" | grep -q "Ubuntu"; then
         echo -e "${VERDE}Passou${NC}"
     else
         echo -e "${VERMELHO}Falhou${NC}"
-        echo "$OUTPUT"
+    fi
+}
+
+test_distro_fallback() {
+    echo -n "Testando fallback para /usr/lib/os-release... "
+    rm -f "$MOCK_ROOT/etc/os-release"
+    cat << EOF > "$MOCK_ROOT/usr/lib/os-release"
+ID=fedora
+PRETTY_NAME="Fedora Linux"
+EOF
+    
+    OUTPUT=$(detectar_distro)
+    if echo "$OUTPUT" | grep -q "Fedora"; then
+        echo -e "${VERDE}Passou${NC}"
+    else
+        echo -e "${VERMELHO}Falhou${NC}"
     fi
 }
 
@@ -172,7 +180,7 @@ test_sem_gpu() {
 }
 
 test_distro_ubuntu
-test_distro_arch
+test_distro_fallback
 test_gpu_nvidia_proprietario
 test_gpu_nvidia_nouveau
 test_gpu_amd
@@ -180,5 +188,6 @@ test_gpu_intel_arc
 test_gpu_integrada
 test_sem_gpu
 
-rm -f "$MOCK_OS_RELEASE"
+rm -rf "$MOCK_ROOT"
+rm -f scripts/install_testable.sh
 echo "Testes concluídos!"
