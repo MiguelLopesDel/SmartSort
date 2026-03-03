@@ -1,57 +1,52 @@
 # 🤖 SmartSort - Organizador Inteligente de Ficheiros
 
-O **SmartSort** é um serviço de automação local que monitoriza os seus diretórios (como a pasta de Downloads) em tempo real, classifica os novos ficheiros utilizando Inteligência Artificial e organiza-os em pastas categorizadas automaticamente.
+O **SmartSort** é um serviço de automação para Linux que monitoriza diretórios em tempo real, classifica ficheiros utilizando Inteligência Artificial (local ou remota) e organiza-os automaticamente.
 
 ---
 
 ## ✨ Funcionalidades
 
-- **Monitorização em Tempo Real**: Utiliza `watchdog` para detetar novos ficheiros instantaneamente.
-- **Extração de Texto Multi-Formato**: 
-  - PDFs (via `pypdf`)
-  - Imagens/OCR (via `pytesseract`)
-  - Ficheiros de texto (`.txt`, `.csv`, `.md`)
-- **Classificação Inteligente**:
-  - **Zero-Shot Learning**: Classifica documentos sem treino prévio usando modelos da HuggingFace (ex: mDeBERTa).
-  - **Machine Learning Local**: Modelo Scikit-Learn (Naive Bayes) treinado com os seus próprios dados.
-  - **Regras de Fallback**: Organização baseada em extensões para rapidez.
-- **Estrutura Profissional**: Organizado seguindo o padrão `src/` layout.
+- **Monitorização em Tempo Real**: Deteção instantânea via `watchdog`.
+- **Extração de Texto Multi-Formato**: Suporte para PDFs, Imagens (OCR via Tesseract) e ficheiros de texto.
+- **Classificação por IA**:
+  - **Zero-Shot Learning**: Modelos HuggingFace (ex: mDeBERTa) para classificação sem treino.
+  - **Machine Learning Local**: Scikit-Learn (Naive Bayes) customizável.
+- **Aceleração por Hardware**: Preparado para inferência em GPU (NVIDIA, AMD RX, Intel ARC).
+- **Daemonização**: Integração total com `systemd` para execução em segundo plano.
 
 ---
 
-## 🚀 Instalação e Configuração
+## 🚀 Instalação Automatizada (Recomendado)
 
-### Pré-requisitos
-- Python 3.10+
-- Tesseract OCR (para suporte a imagens)
-  ```bash
-  # Ubuntu/Debian
-  sudo apt install tesseract-ocr tesseract-ocr-por
-  ```
+O SmartSort inclui um script de instalação inteligente que deteta a sua distribuição (Ubuntu, Debian, Arch, Fedora), verifica o hardware de GPU e configura o ambiente Python e o serviço de sistema.
 
-### Instalação
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/MiguelLopesDel/SmartSort.git
-   cd SmartSort
-   ```
+```bash
+git clone https://github.com/MiguelLopesDel/SmartSort.git
+cd SmartSort
+chmod +x scripts/install.sh
+./scripts/install.sh
+```
 
-2. Crie e ative um ambiente virtual:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+### O que o instalador faz:
+1. **Verifica Atualizações**: Garante que tem a versão mais recente do código.
+2. **Hardware Check**: Valida se possui uma GPU dedicada suportada.
+3. **Dependências do Sistema**: Instala `tesseract-ocr`, `python3-venv`, `pciutils`, etc.
+4. **Ambiente Python**: Cria o `venv` e instala os `requirements.txt`.
+5. **Systemd**: Instala e inicia o serviço `smartsort.service`.
 
-3. Instale as dependências:
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
+
+## 💻 Requisitos de Sistema
+
+- **SO**: Linux (Distribuições baseadas em Debian, Arch ou Fedora).
+- **GPU**: GPU dedicada obrigatória (NVIDIA, AMD Radeon RX ou Intel ARC) para aceleração de IA.
+- **OCR**: Tesseract OCR (instalado automaticamente pelo script).
 
 ---
 
 ## ⚙️ Configuração
 
-Edite o ficheiro `config/config.yaml` para definir as suas preferências:
+As definições estão centralizadas em `config/config.yaml`:
 
 ```yaml
 directories_to_watch:
@@ -66,19 +61,19 @@ ai_classification:
 
 ---
 
-## 🛠️ Como Usar
+## 🛠️ Gestão do Serviço
 
-### Iniciar o Monitorizador
-Para começar a organizar os seus ficheiros automaticamente:
-```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-python3 -m smartsort
-```
+Após a instalação, pode gerir o SmartSort como qualquer outro serviço Linux:
 
-### Treinar o Modelo de ML Local (Opcional)
-Se preferir usar o modo `local_ml`, treine o modelo com os seus dados:
 ```bash
-python3 -c "from smartsort.core.trainer import treinar; treinar()"
+# Verificar status
+sudo systemctl status smartsort
+
+# Reiniciar após mudar configurações
+sudo systemctl restart smartsort
+
+# Ver logs em tempo real
+journalctl -u smartsort -f
 ```
 
 ---
@@ -87,21 +82,13 @@ python3 -c "from smartsort.core.trainer import treinar; treinar()"
 
 ```text
 SmartSort/
-├── config/          # Configurações (.yaml)
-├── data/            # Pastas de teste e destino
-├── deploy/          # Docker e Scripts de Serviço
-├── models/          # Modelos de ML guardados
-├── src/
-│   └── smartsort/   # Código fonte principal
-│       ├── core/    # Engine e Lógica de IA
-│       └── utils/   # Helpers (OCR, PDF)
-└── tests/           # Suite de testes
+├── config/          # Configuração do utilizador
+├── data/            # Pastas de processamento e destino
+├── deploy/          # Ficheiro de serviço systemd e Docker
+├── scripts/         # Instalador e utilitários de manutenção
+├── src/smartsort/   # Código fonte (Pacote Python)
+└── tests/           # Testes unitários
 ```
-
----
-
-## 📄 Licença
-Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
 
 ---
 *Desenvolvido por [Miguel Lopes](https://github.com/MiguelLopesDel)*
