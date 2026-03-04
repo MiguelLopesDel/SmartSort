@@ -271,6 +271,11 @@ class FileProcessor:
     def classify_file(self, file_path, filename):
         ext = filename.split(".")[-1].lower() if "." in filename else ""
 
+        video_extensions = ("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm")
+        if ext in video_extensions:
+            logger.info(f"Ficheiro de vídeo detetado: [yellow]{filename}[/yellow]. Usando organização por extensão.")
+            return self.fallback_rules.get(ext, "Videos"), 1.0
+
         if self.power_manager.should_use_fallback():
             logger.info(f"Modo Economia: Saltando IA pesada para [yellow]{filename}[/yellow].")
             return self.fallback_rules.get(ext, "Outros"), None
