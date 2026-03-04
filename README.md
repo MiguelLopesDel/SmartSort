@@ -61,7 +61,7 @@ chmod +x scripts/install.sh
 
 - **SO**: Linux (Distribuições baseadas em Debian, Arch ou Fedora).
 - **Init System**: **systemd** (Obrigatório para o modo Daemon/Serviço).
-- **Hardware**: 
+- **Hardware**:
   - **GPU Dedicada**: NVIDIA (CUDA), AMD (OpenVINO/CPU) ou Intel ARC.
   - **GPU Integrada**: Intel Iris Xe, AMD Radeon Graphics (via OpenVINO).
   - **CPU**: Mínimo de 4GB de RAM e suporte a instruções AVX2.
@@ -85,7 +85,7 @@ ai_classification:
 ```
 
 ### 🧹 Reorganização de Ficheiros Existentes
-Por padrão, o SmartSort **reorganiza automaticamente** todos os ficheiros que já se encontram nas pastas vigiadas assim que o serviço arranca. 
+Por padrão, o SmartSort **reorganiza automaticamente** todos os ficheiros que já se encontram nas pastas vigiadas assim que o serviço arranca.
 
 Esta funcionalidade garante que o seu diretório seja limpo imediatamente, sem precisar de esperar por novos eventos de download. A lógica de segurança impede que ficheiros ocultos (como `.gitkeep`) ou subpastas sejam movidos indevidamente.
 

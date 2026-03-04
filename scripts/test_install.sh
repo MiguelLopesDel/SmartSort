@@ -42,7 +42,7 @@ ID=ubuntu
 PRETTY_NAME="Ubuntu 22.04 LTS"
 EOF
     rm -f "$MOCK_ROOT/usr/lib/os-release"
-    
+
     OUTPUT=$(detectar_distro)
     if echo "$OUTPUT" | grep -q "Ubuntu"; then
         echo -e "${VERDE}Passou${NC}"
@@ -58,7 +58,7 @@ test_distro_fallback() {
 ID=fedora
 PRETTY_NAME="Fedora Linux"
 EOF
-    
+
     OUTPUT=$(detectar_distro)
     if echo "$OUTPUT" | grep -q "Fedora"; then
         echo -e "${VERDE}Passou${NC}"
@@ -73,7 +73,7 @@ test_distro_arch() {
 ID=arch
 PRETTY_NAME="Arch Linux"
 EOF
-    
+
     OUTPUT=$(detectar_distro)
     if echo "$OUTPUT" | grep -q "Arch Linux"; then
         echo -e "${VERDE}Passou${NC}"
@@ -91,9 +91,9 @@ test_gpu_nvidia_proprietario() {
 nvidia_modeset 1234 1 nvidia_drm
 nvidia 1234 1234"
     export MOCK_MODINFO_OUTPUT="license: NVIDIA"
-    
+
     OUTPUT=$(detectar_gpu)
-    
+
     if echo "$OUTPUT" | grep -q "NVIDIA Proprietário"; then
          echo -e "${VERDE}Passou${NC}"
     else
@@ -106,10 +106,10 @@ test_gpu_nvidia_nouveau() {
     echo -n "Testando GPU NVIDIA com Driver Nouveau... "
     export MOCK_LSPCI_OUTPUT="01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070] [10de:2484] (rev a1)"
     export MOCK_LSMOD_OUTPUT="nouveau 1234 0"
-    
+
 
     OUTPUT=$(echo "s" | detectar_gpu)
-    
+
     if echo "$OUTPUT" | grep -q "Nouveau"; then
          echo -e "${VERDE}Passou${NC}"
     else
@@ -121,9 +121,9 @@ test_gpu_nvidia_nouveau() {
 test_gpu_amd() {
     echo -n "Testando GPU AMD Dedicada (Radeon RX)... "
     export MOCK_LSPCI_OUTPUT="03:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 21 [Radeon RX 6800/6800 XT / 6900 XT] (rev c1)"
-    
+
     OUTPUT=$(detectar_gpu)
-    
+
     if echo "$OUTPUT" | grep -q "AMD Dedicada"; then
          echo -e "${VERDE}Passou${NC}"
     else
@@ -135,9 +135,9 @@ test_gpu_amd() {
 test_gpu_intel_arc() {
     echo -n "Testando GPU Intel Dedicada (ARC)... "
     export MOCK_LSPCI_OUTPUT="03:00.0 VGA compatible controller [0300]: Intel Corporation DG2 [Arc A770] [8086:56a0] (rev 08)"
-    
+
     OUTPUT=$(detectar_gpu)
-    
+
     if echo "$OUTPUT" | grep -q "Intel Dedicada (ARC)"; then
          echo -e "${VERDE}Passou${NC}"
     else
@@ -149,11 +149,11 @@ test_gpu_intel_arc() {
 test_gpu_integrada() {
     echo -n "Testando abortar com GPU Integrada... "
     export MOCK_LSPCI_OUTPUT="00:02.0 VGA compatible controller [0300]: Intel Corporation CometLake-H GT2 [UHD Graphics] [8086:9bc4] (rev 05)"
-    
+
 
     OUTPUT=$(detectar_gpu 2>&1)
     EXIT_CODE=$?
-    
+
     if [ $EXIT_CODE -ne 0 ] && echo "$OUTPUT" | grep -q "Vou resolver isso depois"; then
          echo -e "${VERDE}Passou${NC}"
     else
@@ -167,10 +167,10 @@ test_gpu_integrada() {
 test_sem_gpu() {
     echo -n "Testando abortar sem GPU... "
     export MOCK_LSPCI_OUTPUT=""
-    
+
     OUTPUT=$(detectar_gpu 2>&1)
     EXIT_CODE=$?
-    
+
     if [ $EXIT_CODE -ne 0 ] && echo "$OUTPUT" | grep -q "Vou resolver isso depois"; then
          echo -e "${VERDE}Passou${NC}"
     else

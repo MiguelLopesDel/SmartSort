@@ -20,17 +20,17 @@ verificar_atualizacao() {
         git fetch origin main > /dev/null 2>&1
         LOCAL=$(git rev-parse HEAD 2>/dev/null)
         REMOTE=$(git rev-parse origin/main 2>/dev/null)
-        
+
         if [ "$LOCAL" != "$REMOTE" ] && [ -n "$REMOTE" ]; then
             echo -e "${AMARELO}Uma atualização foi encontrada no repositório.${NC}"
             read -p "Deseja baixar a atualização agora? [s/N]: " atualizar
             if [[ "$atualizar" == "s" || "$atualizar" == "S" ]]; then
                 echo "Atualizando de forma inteligente para evitar conflitos..."
-                
+
                 # Cancela qualquer merge/rebase pendente que esteja travando o git
                 git merge --abort > /dev/null 2>&1
                 git rebase --abort > /dev/null 2>&1
-                
+
                 # Backup do config.yaml do usuário (único arquivo que ele deve mudar)
                 if [ -f "config/config.yaml" ]; then
                     cp "config/config.yaml" "config/config.yaml.bak"
@@ -44,7 +44,7 @@ verificar_atualizacao() {
                         mv "config/config.yaml.bak" "config/config.yaml"
                         echo "Configuração pessoal restaurada com sucesso."
                     fi
-                    
+
                     echo -e "${VERDE}Atualização concluída com sucesso.${NC}"
                     echo -e "${VERDE}Reiniciando o instalador...${NC}"
                     exec "$0" "--skip-update"
@@ -76,14 +76,14 @@ detectar_distro() {
         echo -e "${VERMELHO}Não foi possível detectar a distribuição Linux.${NC}"
         exit 1
     fi
-    
+
     echo -e "Distribuição detectada: ${VERDE}${PRETTY_NAME}${NC}"
 }
 
 
 detectar_gpu() {
     echo "Detectando hardware de GPU..."
-    
+
     if ! command -v lspci &> /dev/null; then
         echo -e "${AMARELO}Comando lspci não encontrado. Verificação detalhada de GPU ignorada.${NC}"
         echo -e "${VERMELHO}Não foi possível verificar a GPU. O programa precisa de uma GPU dedicada.${NC}"
@@ -93,16 +93,16 @@ detectar_gpu() {
 
 
     GPU_INFO=$(lspci -nn | grep -E -i "(VGA|3D)")
-    
+
     HAS_DEDICATED=false
     GPU_VENDOR=""
     NVIDIA_DRIVER=""
-    
+
 
     if echo "$GPU_INFO" | grep -iq "nvidia"; then
         HAS_DEDICATED=true
         GPU_VENDOR="NVIDIA"
-        
+
 
         if command -v lsmod &> /dev/null; then
             if lsmod | grep -iq "nouveau"; then
@@ -120,7 +120,7 @@ detectar_gpu() {
         else
             NVIDIA_DRIVER="Indisponível (lsmod ausente)"
         fi
-        
+
     elif echo "$GPU_INFO" | grep -iq -E "radeon rx|navi"; then
 
         HAS_DEDICATED=true
@@ -139,7 +139,7 @@ detectar_gpu() {
     fi
 
     echo -e "GPU Dedicada detectada: ${VERDE}${GPU_VENDOR}${NC}"
-    
+
     if [ "$GPU_VENDOR" = "NVIDIA" ]; then
         echo -e "Driver NVIDIA em uso: ${AMARELO}${NVIDIA_DRIVER}${NC}"
         if [[ "$NVIDIA_DRIVER" == *"Nouveau"* ]]; then
@@ -164,7 +164,7 @@ gerar_recomendacoes() {
 
 instalar_dependencias() {
     echo "Verificando dependências de sistema..."
-    
+
     # Verifica se pacotes essenciais já existem para pular o install pesado
     if command -v tesseract &> /dev/null && command -v lspci &> /dev/null && command -v git &> /dev/null; then
         echo "Dependências de sistema já encontradas. Pulando instalação de pacotes."
@@ -189,7 +189,7 @@ configurar_python() {
         python3 -m venv venv
     fi
     source venv/bin/activate
-    
+
     mkdir -p "$(pwd)/.tmp"
     export TMPDIR="$(pwd)/.tmp"
 
@@ -202,7 +202,7 @@ configurar_python() {
         echo "Alteração detectada nos requisitos. Instalando dependências Python..."
         pip install --upgrade pip
         pip install -r requirements.txt
-        
+
         if [ -f "requirements-accel.txt" ]; then
             pip install -r requirements-accel.txt || echo "Aviso: Falha em algumas dependências de aceleração."
         fi
@@ -219,9 +219,9 @@ instalar_servico() {
     BIN_PATH="/usr/local/bin/smartsort"
     CURRENT_USER=$(whoami)
     PROJECT_DIR=$(pwd)
-    
+
     NEED_UPDATE=false
-    
+
     # Gera um arquivo temporário para comparação
     TEMP_SERVICE="/tmp/smartsort.service.new"
     if [ -f "deploy/smartsort.service" ]; then
@@ -259,7 +259,7 @@ instalar_servico() {
     else
         echo "O serviço e os atalhos já estão atualizados. Pulando etapa de sudo."
     fi
-    
+
     rm -f "$TEMP_SERVICE"
 }
 
