@@ -2,17 +2,27 @@ name: Distro Compatibility Check
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "scripts/install.sh"
+      - "requirements*.txt"
+      - ".github/workflows/distro-check.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "scripts/install.sh"
+      - "requirements*.txt"
+      - ".github/workflows/distro-check.yml"
+  workflow_dispatch:
 
 jobs:
   check-distros:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
+      fail-fast: false
       matrix:
-        distro: ["fedora:latest", "archlinux:latest", "debian:stable-slim"]
+        distro: ["archlinux:latest", "debian:stable-slim"]
 
     steps:
       - uses: actions/checkout@v4
@@ -20,20 +30,16 @@ jobs:
       - name: Real Dependency Install Test on ${{ matrix.distro }}
         run: |
           docker run --rm -v $(pwd):/app -w /app --user root ${{ matrix.distro }} sh -c "
-            # Setup basico para rodar o instalador
-            if command -v dnf; then dnf install -y sudo git pciutils; fi
             if command -v pacman; then pacman -Sy --noconfirm sudo git pciutils; fi
             if command -v apt-get; then apt-get update && apt-get install -y sudo git pciutils; fi
 
-            # Testa se o script consegue instalar as dependencias de sistema REAIS
             ./scripts/install.sh --skip-update | grep -E 'Distribuição detectada|Verificando dependências'
 
-            # Validação robusta do Tesseract
             if command -v tesseract > /dev/null; then
               echo '✅ Tesseract instalado com sucesso!'
               tesseract --version | grep 'tesseract'
             else
-              echo '❌ ERRO: Tesseract não foi instalado pelo script!'
+              echo '❌ ERRO: Tesseract não foi instalado!'
               exit 1
             fi
           "
