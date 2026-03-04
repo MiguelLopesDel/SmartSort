@@ -1,6 +1,10 @@
 # 🤖 SmartSort - Organizador Inteligente de Ficheiros
 
-O **SmartSort** é um serviço de automação para Linux que monitoriza diretórios em tempo real, classifica ficheiros utilizando Inteligência Artificial (local ou remota) e organiza-os automaticamente.
+[![CI - SmartSort](https://github.com/MiguelLopesDel/SmartSort/actions/workflows/ci.yml/badge.svg)](https://github.com/MiguelLopesDel/SmartSort/actions/workflows/ci.yml)
+[![Distro Compatibility Check](https://github.com/MiguelLopesDel/SmartSort/actions/workflows/distro-check.yml/badge.svg)](https://github.com/MiguelLopesDel/SmartSort/actions/workflows/distro-check.yml)
+
+O **SmartSort** é um serviço de automação para Linux que monitoriza diretórios em tempo real
+, classifica ficheiros utilizando Inteligência Artificial (local ou remota) e organiza-os automaticamente.
 
 ---
 
