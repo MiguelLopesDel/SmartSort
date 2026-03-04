@@ -3,13 +3,13 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Instalar compiladores necessários para algumas dependências Python
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
+    libsndfile1-dev \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar dependências Python em uma pasta separada para copiar depois
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir --target=/app/deps \
@@ -26,12 +26,14 @@ ENV PATH="/app/deps/bin:$PATH"
 
 WORKDIR /app
 
-# Instalar apenas dependências de runtime (OCR e utilitários de hardware)
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-por \
     libtesseract-dev \
     pciutils \
+    ffmpeg \
+    libsndfile1 \
+    libopenblas0 \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Copiar dependências do builder

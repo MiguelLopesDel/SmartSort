@@ -143,7 +143,7 @@ class SmartSortTUI:
                 save_config(self.config)
             elif choice == 2:
                 console.print("[yellow]Iniciando Benchmark de Áudio... Isso pode demorar e baixar modelos.[/yellow]")
-                # Resolve o caminho para o root do projeto
+
                 curr_dir = os.path.abspath(__file__)
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(curr_dir))))
                 benchmark_path = os.path.join(project_root, "scripts", "benchmark_audio.py")
