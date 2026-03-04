@@ -40,12 +40,15 @@ class FileProcessor:
 
         self.ml_model = None
         self.zero_shot_classifier = None
+        self.whisper_model = None
+        self._current_audio_model = None
         self._current_model_name = None
         self._current_mode = None
         self._last_battery_state = None
         self._last_provider = None
 
         self._load_models()
+        self._load_audio_model()
 
     def update_config(self, new_config):
         """Atualiza a configuração e recarrega modelos apenas se necessário."""
@@ -70,6 +73,36 @@ class FileProcessor:
             self._load_models()
         else:
             logger.debug("Configuração atualizada (sem necessidade de recarregar modelos de IA).")
+
+    def _load_audio_model(self):
+        """Carrega o modelo Whisper baseado no estado de energia."""
+        audio_cfg = self.config.get("audio_classification", {"enabled": False})
+        if not audio_cfg.get("enabled"):
+            self.whisper_model = None
+            return
+
+        on_battery = self.power_manager.is_on_battery()
+        profile = audio_cfg.get("battery_mode" if on_battery else "ac_mode", {})
+
+        if not profile.get("enabled"):
+            self.whisper_model = None
+            return
+
+        model_name = profile.get("model", "tiny")
+        device = "cuda" if profile.get("use_gpu") and self.recommender._check_nvidia_gpu() else "cpu"
+
+        if self._current_audio_model == f"{model_name}_{device}":
+            return
+
+        try:
+            import whisper
+
+            logger.info(f"Carregando Inteligência de Áudio ({model_name}) em {device.upper()}...")
+            self.whisper_model = whisper.load_model(model_name, device=device)
+            self._current_audio_model = f"{model_name}_{device}"
+        except Exception as e:
+            logger.error(f"Erro ao carregar Whisper: {e}")
+            self.whisper_model = None
 
     def _load_models(self):
         """Lógica interna de carregamento de modelos com cache local."""
@@ -272,31 +305,45 @@ class FileProcessor:
         ext = filename.split(".")[-1].lower() if "." in filename else ""
 
         video_extensions = ("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm")
-        if ext in video_extensions:
-            logger.info(f"Ficheiro de vídeo detetado: [yellow]{filename}[/yellow]. Usando organização por extensão.")
-            return self.fallback_rules.get(ext, "Videos"), 1.0
+        extracted_text = ""
 
-        if self.power_manager.should_use_fallback():
+        if ext in video_extensions:
+            if self.whisper_model:
+                try:
+                    logger.info(f"A analisar áudio de [yellow]{filename}[/yellow]...")
+                    result = self.whisper_model.transcribe(file_path)
+                    extracted_text = result.get("text", "")
+                    if extracted_text:
+                        logger.debug(f"Áudio transcrito: {extracted_text[:100]}...")
+                except Exception as e:
+                    logger.warning(f"Falha ao transcrever áudio: {e}")
+
+            if not extracted_text:
+                logger.info(
+                    f"Ficheiro de vídeo detetado: [yellow]{filename}[/yellow]. Usando organização por extensão."
+                )
+                return self.fallback_rules.get(ext, "Videos"), 1.0
+
+        elif self.power_manager.should_use_fallback():
             logger.info(f"Modo Economia: Saltando IA pesada para [yellow]{filename}[/yellow].")
             return self.fallback_rules.get(ext, "Outros"), None
 
-        extracted_text = ""
-
         clean_filename = re.sub(r"[._-]", " ", filename.rsplit(".", 1)[0])
 
-        if ext == "pdf":
-            logger.debug(f"A extrair texto do PDF {filename}...")
-            extracted_text = self.extract_text_from_pdf(file_path)
-        elif ext in ["jpg", "jpeg", "png"]:
-            logger.debug(f"A extrair texto da imagem {filename} via OCR...")
-            extracted_text = self.extract_text_from_image(file_path)
-        elif ext in ["txt", "md", "csv"]:
-            logger.debug(f"A extrair texto do ficheiro de texto {filename}...")
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    extracted_text = f.read()
-            except Exception as e:
-                logger.error(f"Erro ao ler texto: {e}")
+        if not extracted_text:
+            if ext == "pdf":
+                logger.debug(f"A extrair texto do PDF {filename}...")
+                extracted_text = self.extract_text_from_pdf(file_path)
+            elif ext in ["jpg", "jpeg", "png"]:
+                logger.debug(f"A extrair texto da imagem {filename} via OCR...")
+                extracted_text = self.extract_text_from_image(file_path)
+            elif ext in ["txt", "md", "csv"]:
+                logger.debug(f"A extrair texto do ficheiro de texto {filename}...")
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        extracted_text = f.read()
+                except Exception as e:
+                    logger.error(f"Erro ao ler texto: {e}")
 
         full_context = f"Ficheiro: {clean_filename}. Conteúdo: {extracted_text[:500]}"
 

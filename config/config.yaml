@@ -17,6 +17,20 @@ ai_classification:
     - "Saude"
     - "Educacao"
     - "Projetos"
+    - "Memes"
+
+# Inteligência de Áudio (Whisper)
+audio_classification:
+  enabled: false
+  sample_duration_sec: 30
+  ac_mode:
+    enabled: true
+    model: "base"
+    use_gpu: true
+  battery_mode:
+    enabled: false
+    model: "tiny"
+    use_gpu: false
 
 # Aceleração de Hardware
 acceleration:

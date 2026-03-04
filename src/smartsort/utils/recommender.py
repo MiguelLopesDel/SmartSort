@@ -39,6 +39,23 @@ class HardwareRecommender:
         except ImportError:
             return False
 
+    def recommend_audio_config(self, on_battery=False):
+        """Sugere uma configuração de áudio baseada no hardware atual."""
+        has_nvidia = self._check_nvidia_gpu()
+        total_ram_gb = psutil.virtual_memory().total / (1024**3)
+
+        if on_battery:
+            if total_ram_gb < 8:
+                return {"enabled": False, "model": "tiny", "use_gpu": False}
+            return {"enabled": True, "model": "tiny", "use_gpu": False}
+
+        if has_nvidia:
+            return {"enabled": True, "model": "base", "use_gpu": True}
+        elif total_ram_gb >= 16:
+            return {"enabled": True, "model": "base", "use_gpu": False}
+
+        return {"enabled": True, "model": "tiny", "use_gpu": False}
+
     def show_analysis(self):
         on_battery = False
         try:
