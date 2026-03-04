@@ -6,7 +6,6 @@ pytesseract
 pillow
 joblib
 scikit-learn
-# Instala apenas a versão CPU do torch para acelerar o CI
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 transformers
@@ -15,4 +14,10 @@ typer
 rich
 pytest
 pytest-mock
+pytest-cov
 flake8
+black
+isort
+mypy
+bandit
+safety

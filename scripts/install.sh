@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Deteta a pasta real do script e a raiz do projeto
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
@@ -27,19 +27,19 @@ verificar_atualizacao() {
             if [[ "$atualizar" == "s" || "$atualizar" == "S" ]]; then
                 echo "Atualizando de forma inteligente para evitar conflitos..."
 
-                # Cancela qualquer merge/rebase pendente que esteja travando o git
+
                 git merge --abort > /dev/null 2>&1
                 git rebase --abort > /dev/null 2>&1
 
-                # Backup do config.yaml do usuário (único arquivo que ele deve mudar)
+
                 if [ -f "config/config.yaml" ]; then
                     cp "config/config.yaml" "config/config.yaml.bak"
                     echo "Backup da configuração criado."
                 fi
 
-                # Força a atualização para o estado da origin/main
+
                 if git reset --hard origin/main; then
-                    # Restaura o config do usuário
+
                     if [ -f "config/config.yaml.bak" ]; then
                         mv "config/config.yaml.bak" "config/config.yaml"
                         echo "Configuração pessoal restaurada com sucesso."
@@ -157,7 +157,7 @@ detectar_gpu() {
 gerar_recomendacoes() {
     echo "Analisando hardware para otimização..."
     export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-    # Tenta rodar o recomendador apenas se o venv estiver ativo ou python3 disponível
+
     python3 src/smartsort/utils/recommender.py || echo "Aviso: Não foi possível gerar recomendações agora."
 }
 
@@ -165,7 +165,7 @@ gerar_recomendacoes() {
 instalar_dependencias() {
     echo "Verificando dependências de sistema..."
 
-    # Verifica se pacotes essenciais já existem para pular o install pesado
+
     if command -v tesseract &> /dev/null && command -v lspci &> /dev/null && command -v git &> /dev/null; then
         echo "Dependências de sistema já encontradas. Pulando instalação de pacotes."
         return 0
@@ -173,7 +173,7 @@ instalar_dependencias() {
 
     echo "Instalando dependências de sistema para $DISTRO..."
     if [[ "$DISTRO" == "ubuntu" || "$DISTRO" == "debian" || "$DISTRO_LIKE" == *"ubuntu"* || "$DISTRO_LIKE" == *"debian"* ]]; then
-        # Só faz update se necessário
+
         sudo apt-get update -y
         sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr tesseract-ocr-por pciutils mesa-utils
     elif [[ "$DISTRO" == "arch" || "$DISTRO_LIKE" == *"arch"* ]]; then
@@ -193,7 +193,7 @@ configurar_python() {
     mkdir -p "$(pwd)/.tmp"
     export TMPDIR="$(pwd)/.tmp"
 
-    # Usa um arquivo de controle para não reinstalar pip toda vez
+
     HASH_FILE=".tmp/req_hash"
     CURRENT_HASH=$(cat requirements.txt requirements-accel.txt 2>/dev/null | md5sum)
     OLD_HASH=$(cat "$HASH_FILE" 2>/dev/null)
@@ -222,7 +222,7 @@ instalar_servico() {
 
     NEED_UPDATE=false
 
-    # Gera um arquivo temporário para comparação
+
     TEMP_SERVICE="/tmp/smartsort.service.new"
     if [ -f "deploy/smartsort.service" ]; then
         sed "s|USER_PLACEHOLDER|$CURRENT_USER|g; s|WORKING_DIR_PLACEHOLDER|$PROJECT_DIR|g" deploy/smartsort.service > "$TEMP_SERVICE"
@@ -231,19 +231,19 @@ instalar_servico() {
         return 1
     fi
 
-    # 1. Verifica se o arquivo de serviço mudou
+
     if [ ! -f "$SERVICE_PATH" ]; then
         NEED_UPDATE=true
     elif ! cmp -s "$TEMP_SERVICE" "$SERVICE_PATH" 2>/dev/null; then
         NEED_UPDATE=true
     fi
 
-    # 2. Verifica se o atalho da CLI está correto
+
     if [ ! -L "$BIN_PATH" ] || [ "$(readlink -f "$BIN_PATH")" != "$PROJECT_ROOT/smartsort-cli.sh" ]; then
         NEED_UPDATE=true
     fi
 
-    # 3. Verifica se o serviço está ativo (se não estiver, precisamos de sudo para iniciar)
+
     if ! systemctl is-active --quiet smartsort.service 2>/dev/null; then
         NEED_UPDATE=true
     fi
