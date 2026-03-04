@@ -1,0 +1,42 @@
+name: Distro Compatibility Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-distros:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro: ["fedora:latest", "archlinux:latest", "debian:stable-slim"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Installation Script on ${{ matrix.distro }}
+        run: |
+          docker run --rm -v $(pwd):/app -w /home/vscode --user root ${{ matrix.distro }} sh -c "
+            # Setup basico para rodar o script (sudo e git)
+            if command -v dnf; then dnf install -y sudo git pciutils; fi
+            if command -v pacman; then pacman -Sy --noconfirm sudo git pciutils; fi
+            if command -v apt-get; then apt-get update && apt-get install -y sudo git pciutils; fi
+
+            # Copia apenas os scripts para simular ambiente
+            cp -r /app/scripts ./scripts
+            cp -r /app/src ./src
+            mkdir -p config data models
+
+            # Executa apenas ate a deteção de distro e dependencias de sistema
+            # Usamos o comando 'bash -n' primeiro para sintaxe
+            bash -n ./scripts/install.sh
+
+            # Mock de comandos pesados para testar apenas a lógica do script
+            echo 'echo Mocking systemctl' > /usr/local/bin/systemctl && chmod +x /usr/local/bin/systemctl
+
+            # Roda o script ignorando a parte de rede/pip (para ser leve)
+            # Queremos validar se ele identifica a distro e seleciona os pacotes certos
+            ./scripts/install.sh --skip-update | grep -E 'Distribuição detectada|Verificando dependências'
+          "

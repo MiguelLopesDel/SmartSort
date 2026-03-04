@@ -48,8 +48,14 @@ coverage.xml
 .hypothesis/
 
 # Data and Models
-models/*.joblib
+models/
+*.joblib
 data/downloads_test/*
 !data/downloads_test/.gitkeep
 data/sorted/*
 !data/sorted/.gitkeep
+.tmp/
+ov_cache/
+
+# Contexto de IA
+GEMINI.md
