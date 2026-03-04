@@ -173,14 +173,14 @@ instalar_dependencias() {
 
     echo "Instalando dependências de sistema para $DISTRO..."
     if [[ "$DISTRO" == "ubuntu" || "$DISTRO" == "debian" || "$DISTRO_LIKE" == *"ubuntu"* || "$DISTRO_LIKE" == *"debian"* ]]; then
-
         sudo apt-get update -y
-        sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr tesseract-ocr-por pciutils mesa-utils
+        sudo apt-get install -y python3 python3-venv python3-pip git tesseract-ocr tesseract-ocr-por pciutils mesa-utils ffmpeg
     elif [[ "$DISTRO" == "arch" || "$DISTRO_LIKE" == *"arch"* ]]; then
-        sudo pacman -Sy --noconfirm --needed python python-pip git tesseract tesseract-data-por pciutils mesa-utils
+        sudo pacman -Sy --noconfirm --needed python python-pip git tesseract tesseract-data-por pciutils mesa-utils ffmpeg
     elif [[ "$DISTRO" == "fedora" || "$DISTRO_LIKE" == *"fedora"* ]]; then
-        sudo dnf install -y python3 python3-pip git tesseract tesseract-langpack-por pciutils mesa-libGL-devel
+        sudo dnf install -y python3 python3-pip git tesseract tesseract-langpack-por pciutils mesa-libGL-devel ffmpeg
     fi
+
 }
 
 configurar_python() {

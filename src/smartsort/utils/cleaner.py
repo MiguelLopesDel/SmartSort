@@ -8,7 +8,7 @@ from rich.console import Console
 console = Console()
 
 
-def remove_python_comments(filepath):
+def remove_python_comments(filepath: str) -> None:
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             source = f.read()
@@ -50,7 +50,7 @@ def remove_python_comments(filepath):
         console.print(f"[red]Erro ao escrever Python {filepath}: {e}[/red]")
 
 
-def remove_shell_comments(filepath):
+def remove_shell_comments(filepath: str) -> None:
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
@@ -129,7 +129,7 @@ def remove_shell_comments(filepath):
         console.print(f"[red]Erro ao escrever Shell {filepath}: {e}[/red]")
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         console.print("[yellow]Uso: python -m smartsort.utils.cleaner <arquivo_ou_diretorio>[/yellow]")
         sys.exit(1)

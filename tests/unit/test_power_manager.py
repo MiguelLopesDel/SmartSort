@@ -1,61 +1,144 @@
-import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, mock_open
+
+import pytest
 
 from smartsort.utils.power import PowerManager
 
 
-class TestPowerManager(unittest.TestCase):
-    def setUp(self):
-        self.config = {
-            "power_saving": {
-                "enabled": True,
-                "pause_ai_on_battery": True,
-                "throttle_interval_sec": 10,
-                "stop_below_percent": 20,
-            }
+@pytest.fixture
+def config():
+    return {
+        "power_saving": {
+            "enabled": True,
+            "pause_ai_on_battery": True,
+            "throttle_interval_sec": 10,
+            "stop_below_percent": 20,
         }
-        self.pm = PowerManager(self.config)
-
-    @patch("psutil.sensors_battery")
-    def test_battery_status_detection(self, mock_battery):
-        mock_battery.return_value = MagicMock(power_plugged=False, percent=50)
-        self.assertTrue(self.pm.is_on_battery())
-        self.assertEqual(self.pm.get_battery_percent(), 50)
-
-    @patch("psutil.sensors_battery")
-    def test_processing_stop_on_low_battery(self, mock_battery):
-        mock_battery.return_value = MagicMock(power_plugged=False, percent=15)
-        self.assertTrue(self.pm.should_stop_processing())
-
-    @patch("psutil.Process.cpu_percent")
-    @patch("psutil.Process.memory_info")
-    def test_process_resource_usage_collection(self, mock_mem, mock_cpu):
-        mock_cpu.return_value = 5.0
-        mock_mem.return_value = MagicMock(rss=100 * 1024 * 1024)
-        cpu, mem = self.pm.get_process_resource_usage()
-        self.assertEqual(cpu, 5.0)
-        self.assertEqual(mem, 100.0)
-
-    @patch("os.path.exists")
-    @patch("os.listdir")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_system_discharge_rate_reading(self, m_open, m_listdir, m_exists):
-        m_exists.side_effect = lambda p: "power_now" in p or "type" in p or "/sys/class/power_supply/" in p
-        m_listdir.return_value = ["BAT0"]
-        m_open.side_effect = [mock_open(read_data="Battery").return_value, mock_open(read_data="15000000").return_value]
-        rate = self.pm.get_system_discharge_rate()
-        self.assertEqual(rate, 15.0)
-
-    @patch("psutil.cpu_percent")
-    @patch("smartsort.utils.power.PowerManager.get_process_resource_usage")
-    @patch("smartsort.utils.power.PowerManager.is_on_battery")
-    def test_app_energy_impact_estimation(self, mock_on_batt, mock_res, mock_sys_cpu):
-        mock_on_batt.return_value = True
-        mock_res.return_value = (10.0, 50.0)
-        mock_sys_cpu.return_value = 20.0
-        impact = self.pm.estimate_app_impact()
-        self.assertEqual(impact, 50.0)
+    }
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture
+def pm(config):
+    return PowerManager(config)
+
+
+def test_is_on_battery_scenarios(pm, mocker):
+    """
+    GIVEN: Diferentes estados de conexão de energia
+    WHEN: is_on_battery é chamado
+    THEN: Retorna True apenas se houver bateria e não estiver carregando
+    """
+
+    mock_battery = mocker.patch("psutil.sensors_battery")
+    mock_battery.return_value = MagicMock(power_plugged=False)
+    assert pm.is_on_battery() is True
+
+    mock_battery.return_value = MagicMock(power_plugged=True)
+    assert pm.is_on_battery() is False
+
+    mock_battery.return_value = None
+    assert pm.is_on_battery() is False
+
+
+@pytest.mark.parametrize(
+    "percent, expected_percent",
+    [
+        (50.0, 50.0),
+        (15.5, 15.5),
+        (None, 100.0),
+    ],
+)
+def test_get_battery_percent_parametrized(pm, mocker, percent, expected_percent):
+    """
+    GIVEN: Diferentes níveis de bateria informados pelo sistema
+    WHEN: get_battery_percent é chamado
+    THEN: Retorna o valor correto ou fallback de 100%
+    """
+    mock_battery = mocker.patch("psutil.sensors_battery")
+    if percent is None:
+        mock_battery.return_value = None
+    else:
+        mock_battery.return_value = MagicMock(percent=percent)
+
+    assert pm.get_battery_percent() == expected_percent
+
+
+def test_should_stop_processing_logic(pm, mocker):
+    """
+    GIVEN: Níveis de bateria críticos ou seguros
+    WHEN: should_stop_processing é chamado
+    THEN: Retorna True se na bateria e abaixo do limite configurado (20%)
+    """
+    mock_battery = mocker.patch("psutil.sensors_battery")
+
+    mock_battery.return_value = MagicMock(power_plugged=True, percent=10)
+    assert pm.should_stop_processing() is False
+
+    mock_battery.return_value = MagicMock(power_plugged=False, percent=25)
+    assert pm.should_stop_processing() is False
+
+    mock_battery.return_value = MagicMock(power_plugged=False, percent=15)
+    assert pm.should_stop_processing() is True
+
+
+def test_get_process_resource_usage_error_handling(pm, mocker):
+    """
+    GIVEN: Falha ao acessar informações do processo (ex: permissão ou PID inexistente)
+    WHEN: get_process_resource_usage é chamado
+    THEN: Retorna (0.0, 0.0) graciosamente em vez de quebrar
+    """
+    pm.process = MagicMock()
+    pm.process.cpu_percent.side_effect = Exception("Acesso Negado")
+
+    cpu, mem = pm.get_process_resource_usage()
+    assert cpu == 0.0
+    assert mem == 0.0
+
+
+def test_get_system_discharge_rate_no_sys_fs(pm, mocker):
+    """
+    GIVEN: Sistema sem /sys/class/power_supply (ex: Windows, WSL, Docker)
+    WHEN: get_system_discharge_rate é chamado
+    THEN: Retorna None
+    """
+    mocker.patch("os.path.exists", return_value=False)
+    assert pm.get_system_discharge_rate() is None
+
+
+def test_get_system_discharge_rate_linux_success(pm, mocker):
+    """
+    GIVEN: Sistema Linux com bateria BAT0 reportando power_now
+    WHEN: get_system_discharge_rate é chamado
+    THEN: Retorna o valor em Watts (uW / 1.000.000)
+    """
+    mocker.patch("os.path.exists", side_effect=lambda p: True)
+    mocker.patch("os.listdir", return_value=["BAT0"])
+
+    m_open = mocker.patch("builtins.open", mock_open())
+    m_open.side_effect = [mock_open(read_data="Battery").return_value, mock_open(read_data="15000000").return_value]
+
+    rate = pm.get_system_discharge_rate()
+    assert rate == 15.0
+
+
+def test_estimate_app_impact_cpu_zero(pm, mocker):
+    """
+    GIVEN: Sistema com CPU em repouso absoluto (0% uso total)
+    WHEN: estimate_app_impact é chamado
+    THEN: Retorna 0.0 em vez de causar divisão por zero
+    """
+    mocker.patch.object(pm, "is_on_battery", return_value=True)
+    mocker.patch.object(pm, "get_process_resource_usage", return_value=(5.0, 100.0))
+    mocker.patch("psutil.cpu_percent", return_value=0.0)
+
+    assert pm.estimate_app_impact() == 0.0
+
+
+def test_should_use_fallback_config_disabled(pm):
+    """
+    GIVEN: Recurso de economia de energia desabilitado na config
+    WHEN: should_use_fallback é chamado
+    THEN: Sempre retorna False
+    """
+    pm.config["enabled"] = False
+    assert pm.should_use_fallback() is False

@@ -7,11 +7,11 @@ joblib
 scikit-learn
 transformers
 torch
-pytest
-pytest-mock
-black
-isort
-flake8
 psutil>=5.9.0
 typer
 rich
+
+# Inteligência de Vídeo e Áudio
+openai-whisper>=20230314
+librosa>=0.10.0
+soundfile>=0.12.0
