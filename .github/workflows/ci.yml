@@ -9,13 +9,18 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
           
       - name: Install system dependencies (OCR)
         run: |
@@ -29,23 +34,29 @@ jobs:
           
       - name: Validate Bash scripts syntax
         run: |
-          for file in $(find . -name "*.sh"); do
-            echo "Checking syntax for $file..."
-            bash -n "$file"
-          done
+          find . -name "*.sh" -exec bash -n {} +
           
-      - name: Basic lint check (errors only)
-        run: flake8 src/ tests/ --max-line-length=120 --extend-ignore=E203 --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Code Style Check (Flake8)
+        run: |
+          flake8 src/ tests/ --max-line-length=120 --extend-ignore=E203 --count --statistics
         
       - name: Run tests
         env:
           PYTHONPATH: src
-        run: pytest -v
+        run: |
+          pytest -v --junitxml=test-results-${{ matrix.python-version }}.xml
+
+      - name: Upload Test Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results-${{ matrix.python-version }}.xml
 
   docker:
     runs-on: ubuntu-latest
     needs: validate
     steps:
       - uses: actions/checkout@v4
-      - name: Build Docker image
+      - name: Build Docker image (Sanity Check)
         run: docker build -t smartsort:latest .

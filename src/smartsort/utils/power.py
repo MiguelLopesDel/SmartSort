@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 import psutil
 
@@ -8,9 +9,76 @@ class PowerManager:
     """Monitora o estado da bateria e fornece recomendações para economia de energia."""
 
     def __init__(self, config):
-        self.config = config.get("power_saving", {})
+        self.config = config.get("power_saving", {}) if config else {}
         self.logger = logging.getLogger(__name__)
-        self.process = psutil.Process(os.getpid())
+        try:
+            self.process = psutil.Process(os.getpid())
+        except Exception:
+            self.process = None
+        
+
+        self.start_time = time.time()
+        self.total_joules_consumed = 0.0
+        self.last_update_time = time.time()
+        self._battery_voltage_cache = 11.1
+
+    def update_accumulated_energy(self):
+        """Calcula e acumula a energia consumida desde a última atualização."""
+        now = time.time()
+        duration = now - self.last_update_time
+        if duration <= 0:
+            return
+
+        discharge_rate = self.get_system_discharge_rate()
+        if discharge_rate is None:
+
+            discharge_rate = 15.0
+
+        app_impact_ratio = self.estimate_app_impact() / 100.0
+        app_watts = discharge_rate * app_impact_ratio
+        
+
+        self.total_joules_consumed += app_watts * duration
+        self.last_update_time = now
+
+    def get_consumed_stats(self):
+        """Retorna estatísticas formatadas do consumo acumulado."""
+        self.update_accumulated_energy()
+        
+
+
+        wh = self.total_joules_consumed / 3600.0
+        
+
+
+        v = self._get_battery_voltage() or self._battery_voltage_cache
+        mah = (wh * 1000.0) / v
+        
+        return {
+            "joules": self.total_joules_consumed,
+            "wh": wh,
+            "mah": mah,
+            "uptime_sec": time.time() - self.start_time
+        }
+
+    def _get_battery_voltage(self):
+        """Obtém a voltagem atual da bateria em Volts."""
+        power_supply_path = "/sys/class/power_supply/"
+        if not os.path.exists(power_supply_path):
+            return None
+        try:
+            for supply in os.listdir(power_supply_path):
+                path = os.path.join(power_supply_path, supply)
+                if os.path.exists(os.path.join(path, "type")):
+                    with open(os.path.join(path, "type"), "r") as f:
+                        if f.read().strip() == "Battery":
+                            v_file = os.path.join(path, "voltage_now")
+                            if os.path.exists(v_file):
+                                with open(v_file, "r") as vf:
+                                    return int(vf.read().strip()) / 1_000_000.0
+        except Exception:
+            pass
+        return None
 
     def get_process_resource_usage(self):
         """Retorna o uso de CPU e Memória do processo atual."""

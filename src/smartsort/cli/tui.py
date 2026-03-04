@@ -10,6 +10,7 @@ from rich import box
 
 from smartsort.cli.config import load_config, save_config, add_directory, set_model, show_status
 from smartsort.utils.logger import logger
+from smartsort.utils.power import PowerManager
 
 console = Console()
 
@@ -19,6 +20,7 @@ class SmartSortTUI:
         if not self.config:
             console.print("[red]Erro ao carregar configuração. Abortando TUI.[/red]")
             sys.exit(1)
+        self.pm = PowerManager(self.config)
 
     def draw_header(self):
         return Panel(
@@ -29,12 +31,10 @@ class SmartSortTUI:
         )
 
     def draw_status_summary(self):
-        from smartsort.utils.power import PowerManager
         from smartsort.utils.recommender import HardwareRecommender
         
-        pm = PowerManager(self.config)
         rec = HardwareRecommender(self.config)
-        on_battery = pm.is_on_battery()
+        on_battery = self.pm.is_on_battery()
         p, d = rec.get_best_acceleration(on_battery)
         
         table = Table(box=box.SIMPLE, expand=True)
@@ -42,19 +42,20 @@ class SmartSortTUI:
         table.add_column("Modo IA", style="magenta")
         table.add_column("Aceleração", style="yellow")
         table.add_column("Energia", style="cyan")
-        table.add_column("Impacto App", style="red")
+        table.add_column("Consumo App (Total)", style="red")
         
         dirs = len(self.config.get("directories_to_watch", []))
         ai_mode = self.config["ai_classification"].get("mode", "off")
         accel = f"{p.upper()} ({d})"
         
         if on_battery:
-            battery_pct = pm.get_battery_percent()
-            app_impact = pm.estimate_app_impact()
-            discharge = pm.get_system_discharge_rate()
+            battery_pct = self.pm.get_battery_percent()
+            app_impact = self.pm.estimate_app_impact()
+            discharge = self.pm.get_system_discharge_rate()
+            stats = self.pm.get_consumed_stats()
             
-            power_str = f"🔋 {battery_pct}%"
-            impact_str = f"{app_impact:.1f}% do uso"
+            power_str = f"🔋 {battery_pct:.1f}%"
+            impact_str = f"{app_impact:.1f}% ({stats['mah']:.2f} mAh)"
             if discharge:
                 impact_str += f" ({discharge:.1f}W sys)"
         else:
@@ -110,7 +111,6 @@ class SmartSortTUI:
                 break
 
     def show_logs(self, lines=15):
-
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         log_path = os.path.join(project_root, "data", "smartsort.log")
         if os.path.exists(log_path):

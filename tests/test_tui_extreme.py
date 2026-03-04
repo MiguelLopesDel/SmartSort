@@ -5,12 +5,11 @@ from smartsort.cli.tui import SmartSortTUI, start_tui
 
 class TestTUIExtreme(unittest.TestCase):
     @patch("smartsort.cli.tui.load_config", return_value=None)
+    @patch("smartsort.cli.tui.PowerManager")
     @patch("smartsort.cli.tui.sys.exit")
-    def test_tui_init_fail(self, mock_exit, mock_load):
-
+    def test_tui_init_fail(self, mock_exit, mock_pm, mock_load):
         SmartSortTUI()
         mock_exit.assert_called_with(1)
-
     @patch("smartsort.cli.tui.load_config")
     @patch("os.path.exists", return_value=False)
     @patch("smartsort.cli.tui.Prompt.ask")
