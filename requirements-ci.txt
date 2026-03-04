@@ -23,3 +23,8 @@ bandit
 safety
 types-PyYAML
 types-psutil
+
+# Inteligência de Vídeo e Áudio para CI
+openai-whisper>=20230314
+librosa>=0.10.0
+soundfile>=0.12.0

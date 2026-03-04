@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from typing import Any, Dict, Optional, Tuple
 
 import psutil
 
@@ -8,7 +9,7 @@ import psutil
 class PowerManager:
     """Monitora o estado da bateria e fornece recomendações para economia de energia."""
 
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         self.config = config.get("power_saving", {}) if config else {}
         self.logger = logging.getLogger(__name__)
         try:
@@ -21,7 +22,7 @@ class PowerManager:
         self.last_update_time = time.time()
         self._battery_voltage_cache = 11.1
 
-    def update_accumulated_energy(self):
+    def update_accumulated_energy(self) -> None:
         """Calcula e acumula a energia consumida desde a última atualização."""
         now = time.time()
         duration = now - self.last_update_time
@@ -39,7 +40,7 @@ class PowerManager:
         self.total_joules_consumed += app_watts * duration
         self.last_update_time = now
 
-    def get_consumed_stats(self):
+    def get_consumed_stats(self) -> Dict[str, float]:
         """Retorna estatísticas formatadas do consumo acumulado."""
         self.update_accumulated_energy()
 
@@ -50,7 +51,7 @@ class PowerManager:
 
         return {"joules": self.total_joules_consumed, "wh": wh, "mah": mah, "uptime_sec": time.time() - self.start_time}
 
-    def _get_battery_voltage(self):
+    def _get_battery_voltage(self) -> Optional[float]:
         """Obtém a voltagem atual da bateria em Volts."""
         power_supply_path = "/sys/class/power_supply/"
         if not os.path.exists(power_supply_path):
@@ -69,7 +70,7 @@ class PowerManager:
             pass
         return None
 
-    def get_process_resource_usage(self):
+    def get_process_resource_usage(self) -> Tuple[float, float]:
         """Retorna o uso de CPU e Memória do processo atual."""
         try:
             cpu_pct = self.process.cpu_percent(interval=0.1)
@@ -79,7 +80,7 @@ class PowerManager:
         except Exception:
             return 0.0, 0.0
 
-    def get_system_discharge_rate(self):
+    def get_system_discharge_rate(self) -> Optional[float]:
         """Tenta obter a taxa de descarga do sistema em Watts (se disponível no Linux)."""
         power_supply_path = "/sys/class/power_supply/"
         if not os.path.exists(power_supply_path):
@@ -109,7 +110,7 @@ class PowerManager:
             pass
         return None
 
-    def estimate_app_impact(self):
+    def estimate_app_impact(self) -> float:
         """Estima o impacto do app no consumo de bateria (%) com base no uso de CPU."""
         cpu_usage, _ = self.get_process_resource_usage()
         on_battery = self.is_on_battery()
@@ -123,23 +124,23 @@ class PowerManager:
         else:
             app_relative_weight = 0.0
 
-        return min(app_relative_weight, 100.0)
+        return float(min(app_relative_weight, 100.0))
 
-    def is_on_battery(self):
+    def is_on_battery(self) -> bool:
         """Verifica se o dispositivo está rodando na bateria (sem cabo conectado)."""
         battery = psutil.sensors_battery()
         if battery:
             return not battery.power_plugged
         return False
 
-    def get_battery_percent(self):
+    def get_battery_percent(self) -> float:
         """Retorna o nível da bateria em porcentagem."""
         battery = psutil.sensors_battery()
         if battery:
-            return battery.percent
-        return 100
+            return float(battery.percent)
+        return 100.0
 
-    def should_stop_processing(self):
+    def should_stop_processing(self) -> bool:
         """Verifica se o processamento deve ser interrompido por bateria baixa."""
         if not self.config.get("enabled", False):
             return False
@@ -152,7 +153,7 @@ class PowerManager:
                 return True
         return False
 
-    def should_use_fallback(self):
+    def should_use_fallback(self) -> bool:
         """Verifica se o sistema deve evitar modelos pesados de IA."""
         if not self.config.get("enabled", False):
             return False
@@ -162,11 +163,11 @@ class PowerManager:
             return True
         return False
 
-    def get_throttle_interval(self):
+    def get_throttle_interval(self) -> int:
         """Retorna o intervalo sugerido de sleep entre processamentos."""
         if not self.config.get("enabled", False):
             return 1
 
         if self.is_on_battery():
-            return self.config.get("throttle_interval_sec", 10)
+            return int(self.config.get("throttle_interval_sec", 10))
         return 1
