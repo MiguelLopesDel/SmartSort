@@ -18,7 +18,7 @@ jobs:
       - name: Install security tools
         run: pip install bandit safety
       - name: Security Scan (Bandit)
-        run: bandit -r src/ -ll
+        run: bandit -c .bandit.yaml -r src/ -ll
       - name: Dependency Check (Safety)
         run: safety check
 

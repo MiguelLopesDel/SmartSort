@@ -1,0 +1,3 @@
+# Configuração para ignorar avisos aceitáveis sem usar comentários no código
+skips:
+  - B615  # Revision pinning no HuggingFace (não aplicável para modelos configuráveis)
