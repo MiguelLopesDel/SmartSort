@@ -1,8 +1,10 @@
-import unittest
-from unittest.mock import patch, MagicMock
 import os
 import tempfile
-from smartsort.utils.cleaner import remove_shell_comments, main
+import unittest
+from unittest.mock import patch
+
+from smartsort.utils.cleaner import main, remove_shell_comments
+
 
 class TestCleanerDeep(unittest.TestCase):
     def test_remove_shell_comments_complex(self):
@@ -12,13 +14,13 @@ echo "Isso # não é comentário"
 ls # Isso é
 VAR="# valor"
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".sh", delete=False) as f:
             f.write(content)
             path = f.name
-        
+
         try:
             remove_shell_comments(path)
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 new = f.read()
             self.assertIn('echo "Isso # não é comentário"', new)
             self.assertNotIn("Isso é", new)
@@ -39,6 +41,7 @@ VAR="# valor"
             with patch("os.path.isfile", return_value=True):
                 main()
                 mock_remove.assert_called_with("test.py")
+
 
 if __name__ == "__main__":
     unittest.main()

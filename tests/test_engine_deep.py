@@ -1,14 +1,15 @@
 import unittest
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
+
 from smartsort.core.engine import FileProcessor
+
 
 class TestEngineDeep(unittest.TestCase):
     def setUp(self):
         self.config = {
             "ai_classification": {"enabled": False},
             "destination_base_folder": "data/sorted",
-            "fallback_rules": {}
+            "fallback_rules": {},
         }
         self.processor = FileProcessor(self.config)
 
@@ -35,6 +36,7 @@ class TestEngineDeep(unittest.TestCase):
             res = self.processor.extract_text_from_pdf("corrupt.pdf")
             self.assertEqual(res, "")
             mock_logger.error.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

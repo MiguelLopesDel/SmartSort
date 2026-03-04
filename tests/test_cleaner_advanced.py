@@ -1,8 +1,10 @@
-import unittest
-from unittest.mock import patch, MagicMock
 import os
 import tempfile
+import unittest
+from unittest.mock import patch
+
 from smartsort.utils.cleaner import main, remove_python_comments
+
 
 class TestCleanerAdvanced(unittest.TestCase):
     @patch("smartsort.utils.cleaner.logger")
@@ -20,10 +22,11 @@ class TestCleanerAdvanced(unittest.TestCase):
             py_file = os.path.join(tmpdir, "test.py")
             with open(py_file, "w") as f:
                 f.write("print(1)")
-            
+
             with patch("sys.argv", ["cleaner.py", tmpdir]):
                 main()
                 mock_py.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

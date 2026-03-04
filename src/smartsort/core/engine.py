@@ -18,18 +18,20 @@ class FileProcessor:
     def __init__(self, config):
         self.config = config
 
-        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        
+        self.project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        )
+
         self.ai_config = config.get("ai_classification", {})
         self.power_manager = PowerManager(config)
         self.recommender = HardwareRecommender(config)
-        
+
         dest_base = config.get("destination_base_folder", "data/sorted")
         if not os.path.isabs(dest_base):
             self.destination_base = os.path.join(self.project_root, dest_base)
         else:
             self.destination_base = dest_base
-            
+
         self.fallback_rules = config.get("fallback_rules", {})
 
         hf_cache = os.path.join(self.project_root, "models", "hf_cache")
@@ -57,9 +59,11 @@ class FileProcessor:
         self.destination_base = new_config.get("destination_base_folder", "data/sorted")
         self.fallback_rules = new_config.get("fallback_rules", {})
 
-        if (old_ai.get("mode") != new_ai.get("mode") or 
-            old_ai.get("zero_shot_model") != new_ai.get("zero_shot_model") or
-            old_accel != new_accel):
+        if (
+            old_ai.get("mode") != new_ai.get("mode")
+            or old_ai.get("zero_shot_model") != new_ai.get("zero_shot_model")
+            or old_accel != new_accel
+        ):
             logger.info("Alteração detectada em configurações de IA/Aceleração. Recarregando modelos...")
             self._load_models()
         else:
@@ -76,7 +80,6 @@ class FileProcessor:
             return
 
         mode = ai_config.get("mode")
-
 
         provider = accel_config.get("provider", "auto")
         device = accel_config.get("device", "auto")
@@ -101,7 +104,6 @@ class FileProcessor:
         elif mode == "zero_shot":
             model_name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
 
-
             if model_name == self._current_model_name and provider == self._current_mode:
                 return
 
@@ -121,8 +123,10 @@ class FileProcessor:
                         logger.info(f"Exportando {model_name} para OpenVINO (Cache Local)...")
                         os.makedirs(ov_cache_dir, exist_ok=True)
                         model = OVModelForSequenceClassification.from_pretrained(
-                            model_name, export=True, device=device.upper(),
-                            load_in_8bit=(accel_config.get("quantization") == "int8")
+                            model_name,
+                            export=True,
+                            device=device.upper(),
+                            load_in_8bit=(accel_config.get("quantization") == "int8"),
                         )
                         model.save_pretrained(ov_cache_dir)
 
@@ -182,7 +186,6 @@ class FileProcessor:
         if not os.path.exists(file_path):
             return
 
-
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
         if os.path.abspath(file_path).startswith(project_root):
             return
@@ -199,7 +202,6 @@ class FileProcessor:
         )
         if filename.startswith(".") or filename.endswith(ignored_extensions) or filename.endswith("~"):
             return
-
 
         time.sleep(2)
         if not os.path.exists(file_path):
@@ -259,7 +261,6 @@ class FileProcessor:
     def classify_file(self, file_path, filename):
         ext = filename.split(".")[-1].lower() if "." in filename else ""
 
-
         if self.power_manager.should_use_fallback():
             logger.info(f"Modo Economia: Saltando IA pesada para [yellow]{filename}[/yellow].")
             return self.fallback_rules.get(ext, "Outros"), None
@@ -281,7 +282,6 @@ class FileProcessor:
                     extracted_text = f.read()
             except Exception as e:
                 logger.error(f"Erro ao ler texto: {e}")
-
 
         full_context = f"Ficheiro: {clean_filename}. Conteúdo: {extracted_text[:500]}"
 

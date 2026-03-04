@@ -22,7 +22,6 @@ class HardwareRecommender:
                 return "openvino", "GPU" if "intel" in cpu_brand else "CPU"
             return "auto", "CPU"
 
-
         if has_nvidia:
             return "cuda", "GPU"
 
@@ -60,7 +59,5 @@ class HardwareRecommender:
         if on_battery:
             logger.info("💻 [yellow]Notebook detectado em bateria! Priorizando eficiência.[/yellow]")
 
-        logger.info(
-            f"Recomendação: [green]{p.upper()}[/green] usando [green]{d.upper()}[/green]"
-        )
+        logger.info(f"Recomendação: [green]{p.upper()}[/green] usando [green]{d.upper()}[/green]")
         logger.info("[bold blue]" + "=" * 50 + "[/bold blue]")

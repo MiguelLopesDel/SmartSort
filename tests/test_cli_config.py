@@ -1,6 +1,8 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
-from smartsort.cli.config import load_config, save_config, add_directory
+from unittest.mock import mock_open, patch
+
+from smartsort.cli.config import add_directory, load_config, save_config
+
 
 class TestCliConfig(unittest.TestCase):
 
@@ -31,9 +33,10 @@ class TestCliConfig(unittest.TestCase):
     def test_add_directory_success(self, mock_save, mock_exists, mock_load):
         mock_load.return_value = {"directories_to_watch": []}
         mock_exists.return_value = True
-        
+
         add_directory("/tmp/test")
         mock_save.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

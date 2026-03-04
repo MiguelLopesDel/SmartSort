@@ -33,26 +33,17 @@ def remove_python_comments(filepath):
 
     lines = source.splitlines(keepends=True)
 
-
     for start, end in reversed(comments):
         start_row, _ = start
         end_row, _ = end
 
-
-
-
-
-        
-
         s_row, s_col = start
         e_row, e_col = end
-        
+
         line_idx = s_row - 1
         line = lines[line_idx]
-        
 
         if line[:s_col].strip() == "":
-
 
             lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
 
@@ -112,7 +103,6 @@ def remove_shell_comments(filepath):
             i += 1
             continue
 
-
         if char == "#" and not in_single_quote and not in_double_quote:
             is_start_of_word = i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
             if is_start_of_word:
@@ -130,7 +120,6 @@ def remove_shell_comments(filepath):
 
                     modified = True
                     newline_pos = content.find("\n", i)
-
 
                     while len(result) > 0 and result[-1] in (" ", "\t"):
                         result.pop()

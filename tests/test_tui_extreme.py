@@ -1,7 +1,8 @@
 import unittest
-from unittest.mock import patch, MagicMock
-import sys
+from unittest.mock import patch
+
 from smartsort.cli.tui import SmartSortTUI, start_tui
+
 
 class TestTUIExtreme(unittest.TestCase):
     @patch("smartsort.cli.tui.load_config", return_value=None)
@@ -10,6 +11,7 @@ class TestTUIExtreme(unittest.TestCase):
     def test_tui_init_fail(self, mock_exit, mock_pm, mock_load):
         SmartSortTUI()
         mock_exit.assert_called_with(1)
+
     @patch("smartsort.cli.tui.load_config")
     @patch("os.path.exists", return_value=False)
     @patch("smartsort.cli.tui.Prompt.ask")
@@ -17,7 +19,6 @@ class TestTUIExtreme(unittest.TestCase):
         mock_load.return_value = {"ai_classification": {}, "acceleration": {}}
         tui = SmartSortTUI()
         tui.show_logs()
-
 
     @patch("smartsort.cli.tui.load_config")
     @patch("smartsort.cli.tui.IntPrompt.ask")
@@ -27,10 +28,10 @@ class TestTUIExtreme(unittest.TestCase):
         mock_load.return_value = {"ai_classification": {}, "acceleration": {}}
 
         mock_int.side_effect = [1, 0]
-        
+
         tui = SmartSortTUI()
         tui.main_menu()
-        
+
         mock_status.assert_called()
 
     @patch("smartsort.cli.tui.SmartSortTUI")
@@ -38,6 +39,7 @@ class TestTUIExtreme(unittest.TestCase):
 
         start_tui()
         mock_tui_class.return_value.main_menu.assert_called()
+
 
 if __name__ == "__main__":
     unittest.main()

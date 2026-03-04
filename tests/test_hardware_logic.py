@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from smartsort.core.engine import FileProcessor
 
@@ -40,7 +40,6 @@ class TestHardwareLogicDecision(unittest.TestCase):
 
         FileProcessor(config)
 
-
         mock_pipe.assert_called()
         found_cuda = False
         for call in mock_pipe.call_args_list:
@@ -64,7 +63,6 @@ class TestHardwareLogicDecision(unittest.TestCase):
 
         with patch("builtins.__import__", side_effect=side_effect):
 
-
             FileProcessor(config)
             self.assertFalse(mock_pipe.called)
 
@@ -75,14 +73,13 @@ class TestHardwareLogicDecision(unittest.TestCase):
         """Verifica se o sistema tenta carregar do cache se ele existir."""
         config = self.config.copy()
         config["acceleration"]["provider"] = "openvino"
-        
 
         mock_exists.return_value = True
-        
 
         mock_ov_class = MagicMock()
         with patch.dict("sys.modules", {"optimum.intel.openvino": mock_ov_class}):
             from optimum.intel.openvino import OVModelForSequenceClassification
+
             with patch.object(OVModelForSequenceClassification, "from_pretrained") as mock_from:
                 FileProcessor(config)
                 mock_from.assert_called()
@@ -96,7 +93,6 @@ class TestHardwareLogicDecision(unittest.TestCase):
         config["acceleration"]["enabled"] = False
 
         FileProcessor(config)
-
 
         self.assertTrue(mock_pipe.called)
 

@@ -1,7 +1,8 @@
 import os
 import sys
-import yaml
+
 import typer
+import yaml
 from rich.console import Console
 from rich.table import Table
 
@@ -9,6 +10,7 @@ from smartsort.utils.logger import logger
 
 app = typer.Typer(help="CLI de Configuração do SmartSort")
 console = Console()
+
 
 def load_config():
 
@@ -21,6 +23,7 @@ def load_config():
         logger.error(f"Arquivo de configuração não encontrado em {config_path}")
         return None
 
+
 def save_config(config):
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -32,6 +35,7 @@ def save_config(config):
     except Exception as e:
         logger.error(f"Erro ao salvar configuração: {e}")
         return False
+
 
 def show_config():
     config = load_config()
@@ -49,6 +53,7 @@ def show_config():
 
     console.print(table)
 
+
 def set_model(name: str):
     config = load_config()
     if not config:
@@ -58,6 +63,7 @@ def set_model(name: str):
     config["ai_classification"]["zero_shot_model"] = name
     if save_config(config):
         console.print(f"Modelo alterado para: [cyan]{name}[/cyan]")
+
 
 def show_status():
     config = load_config()
@@ -82,6 +88,7 @@ def show_status():
 
     console.print(status_table)
 
+
 def add_directory(path: str):
     config = load_config()
     if not config:
@@ -100,38 +107,48 @@ def add_directory(path: str):
     if save_config(config):
         console.print(f"[green]Sucesso:[/green] Diretório [cyan]{full_path}[/cyan] adicionado!")
 
+
 @app.command(name="show")
 def cli_show():
     show_config()
+
 
 @app.command(name="model")
 def cli_model(name: str):
     set_model(name)
 
+
 @app.command(name="status")
 def cli_status():
     show_status()
 
+
 @app.command(name="accel")
 def cli_accel():
     from smartsort.utils.recommender import HardwareRecommender
+
     config = load_config()
     if config:
         rec = HardwareRecommender(config)
         rec.show_analysis()
 
+
 @app.command(name="add")
 def cli_add(path: str):
     add_directory(path)
 
+
 @app.command(name="tui")
 def cli_tui():
     from smartsort.cli.tui import start_tui
+
     start_tui()
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         from smartsort.cli.tui import start_tui
+
         start_tui()
     else:
         app()

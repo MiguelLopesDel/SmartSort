@@ -1,18 +1,18 @@
 import os
 import sys
 import time
+
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
-from rich.live import Live
-from rich.prompt import Prompt, IntPrompt
-from rich import box
 
-from smartsort.cli.config import load_config, save_config, add_directory, set_model, show_status
-from smartsort.utils.logger import logger
+from smartsort.cli.config import add_directory, load_config, save_config, set_model, show_status
 from smartsort.utils.power import PowerManager
 
 console = Console()
+
 
 class SmartSortTUI:
     def __init__(self):
@@ -27,33 +27,33 @@ class SmartSortTUI:
             "[bold blue]SmartSort - Painel de Controle Interativo[/bold blue]\n"
             "[dim]Use os números para navegar e configurar seu sistema[/dim]",
             box=box.DOUBLE_EDGE,
-            style="cyan"
+            style="cyan",
         )
 
     def draw_status_summary(self):
         from smartsort.utils.recommender import HardwareRecommender
-        
+
         rec = HardwareRecommender(self.config)
         on_battery = self.pm.is_on_battery()
         p, d = rec.get_best_acceleration(on_battery)
-        
+
         table = Table(box=box.SIMPLE, expand=True)
         table.add_column("Monitorando", style="green")
         table.add_column("Modo IA", style="magenta")
         table.add_column("Aceleração", style="yellow")
         table.add_column("Energia", style="cyan")
         table.add_column("Consumo App (Total)", style="red")
-        
+
         dirs = len(self.config.get("directories_to_watch", []))
         ai_mode = self.config["ai_classification"].get("mode", "off")
         accel = f"{p.upper()} ({d})"
-        
+
         if on_battery:
             battery_pct = self.pm.get_battery_percent()
             app_impact = self.pm.estimate_app_impact()
             discharge = self.pm.get_system_discharge_rate()
             stats = self.pm.get_consumed_stats()
-            
+
             power_str = f"🔋 {battery_pct:.1f}%"
             impact_str = f"{app_impact:.1f}% ({stats['mah']:.2f} mAh)"
             if discharge:
@@ -61,7 +61,7 @@ class SmartSortTUI:
         else:
             power_str = "🔌 Tomada"
             impact_str = "N/A"
-        
+
         table.add_row(f"{dirs} pastas", ai_mode, accel, power_str, impact_str)
         return table
 
@@ -70,7 +70,7 @@ class SmartSortTUI:
             console.clear()
             console.print(self.draw_header())
             console.print(self.draw_status_summary())
-            
+
             menu_table = Table(show_header=False, box=box.ROUNDED, expand=True)
             menu_table.add_row("[bold yellow]1.[/bold yellow] 📊 Ver Status Detalhado")
             menu_table.add_row("[bold yellow]2.[/bold yellow] 📁 Adicionar Pasta para Vigiar")
@@ -78,11 +78,11 @@ class SmartSortTUI:
             menu_table.add_row("[bold yellow]4.[/bold yellow] ⚡ Alternar Aceleração (ON/OFF)")
             menu_table.add_row("[bold yellow]5.[/bold yellow] 📜 Ver Últimos Logs")
             menu_table.add_row("[bold yellow]0.[/bold yellow] 🚪 Sair")
-            
+
             console.print(Panel(menu_table, title="Menu Principal", border_style="blue"))
-            
+
             choice = IntPrompt.ask("Escolha uma opção", choices=["0", "1", "2", "3", "4", "5"], default=0)
-            
+
             if choice == 1:
                 show_status()
                 Prompt.ask("\nPressione Enter para voltar")
@@ -122,9 +122,11 @@ class SmartSortTUI:
             console.print("[red]Arquivo de log não encontrado.[/red]")
         Prompt.ask("\nPressione Enter para voltar")
 
+
 def start_tui():
     tui = SmartSortTUI()
     tui.main_menu()
+
 
 if __name__ == "__main__":
     start_tui()

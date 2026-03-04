@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 
 class TestTUISmoke(unittest.TestCase):
     def test_tui_is_importable(self):
@@ -8,6 +9,7 @@ class TestTUISmoke(unittest.TestCase):
 
             with patch("smartsort.cli.config.load_config", return_value={"test": True}):
                 from smartsort.cli.tui import SmartSortTUI
+
                 self.assertIsNotNone(SmartSortTUI)
         except Exception as e:
             self.fail(f"Falha ao importar TUI (possível erro de sintaxe): {e}")
@@ -16,9 +18,11 @@ class TestTUISmoke(unittest.TestCase):
         """Testa se a função de desenho básico funciona."""
         with patch("smartsort.cli.config.load_config", return_value={"test": True}):
             from smartsort.cli.tui import SmartSortTUI
+
             tui = SmartSortTUI()
             header = tui.draw_header()
             self.assertIn("SmartSort", str(header.renderable))
+
 
 if __name__ == "__main__":
     unittest.main()

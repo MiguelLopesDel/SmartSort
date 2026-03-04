@@ -15,7 +15,6 @@ class PowerManager:
             self.process = psutil.Process(os.getpid())
         except Exception:
             self.process = None
-        
 
         self.start_time = time.time()
         self.total_joules_consumed = 0.0
@@ -36,7 +35,6 @@ class PowerManager:
 
         app_impact_ratio = self.estimate_app_impact() / 100.0
         app_watts = discharge_rate * app_impact_ratio
-        
 
         self.total_joules_consumed += app_watts * duration
         self.last_update_time = now
@@ -44,22 +42,13 @@ class PowerManager:
     def get_consumed_stats(self):
         """Retorna estatísticas formatadas do consumo acumulado."""
         self.update_accumulated_energy()
-        
-
 
         wh = self.total_joules_consumed / 3600.0
-        
-
 
         v = self._get_battery_voltage() or self._battery_voltage_cache
         mah = (wh * 1000.0) / v
-        
-        return {
-            "joules": self.total_joules_consumed,
-            "wh": wh,
-            "mah": mah,
-            "uptime_sec": time.time() - self.start_time
-        }
+
+        return {"joules": self.total_joules_consumed, "wh": wh, "mah": mah, "uptime_sec": time.time() - self.start_time}
 
     def _get_battery_voltage(self):
         """Obtém a voltagem atual da bateria em Volts."""
@@ -100,7 +89,7 @@ class PowerManager:
             for supply in os.listdir(power_supply_path):
                 supply_path = os.path.join(power_supply_path, supply)
                 type_file = os.path.join(supply_path, "type")
-                
+
                 if os.path.exists(type_file):
                     with open(type_file, "r") as f:
                         if f.read().strip() == "Battery":
@@ -124,19 +113,16 @@ class PowerManager:
         """Estima o impacto do app no consumo de bateria (%) com base no uso de CPU."""
         cpu_usage, _ = self.get_process_resource_usage()
         on_battery = self.is_on_battery()
-        
+
         if not on_battery:
             return 0.0
-
-
-
 
         system_cpu_usage = psutil.cpu_percent()
         if system_cpu_usage > 0:
             app_relative_weight = (cpu_usage / system_cpu_usage) * 100
         else:
             app_relative_weight = 0.0
-            
+
         return min(app_relative_weight, 100.0)
 
     def is_on_battery(self):

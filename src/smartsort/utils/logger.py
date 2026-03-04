@@ -16,16 +16,14 @@ def setup_logger(name="smartsort", log_level=logging.INFO):
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     log_file = os.path.join(project_root, "data", "smartsort.log")
-    
+
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
 
     if logger.handlers:
         return logger
 
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
-    )
+    file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s")
 
     rich_handler = RichHandler(
         console=console,
@@ -43,9 +41,7 @@ def setup_logger(name="smartsort", log_level=logging.INFO):
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir, exist_ok=True)
 
-            file_handler = RotatingFileHandler(
-                log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-            )
+            file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(logging.DEBUG)
             logger.addHandler(file_handler)

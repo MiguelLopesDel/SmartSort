@@ -58,7 +58,6 @@ class TestBatteryOptimization(unittest.TestCase):
         processor = FileProcessor(self.config)
         result = processor.classify_file("teste.pdf", "teste.pdf")
 
-
         category = result[0] if isinstance(result, (tuple, list)) else result
         self.assertEqual(category, "Documentos")
 

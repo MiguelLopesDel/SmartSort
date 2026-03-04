@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
-import os
-import psutil
+from unittest.mock import MagicMock, mock_open, patch
+
 from smartsort.utils.power import PowerManager
+
 
 class TestPowerImpact(unittest.TestCase):
     def setUp(self):
@@ -22,7 +22,7 @@ class TestPowerImpact(unittest.TestCase):
         """Testa a coleta de recursos do processo."""
         mock_cpu.return_value = 5.0
         mock_mem.return_value = MagicMock(rss=100 * 1024 * 1024)
-        
+
         cpu, mem = self.power_manager.get_process_resource_usage()
         self.assertEqual(cpu, 5.0)
         self.assertEqual(mem, 100.0)
@@ -34,13 +34,9 @@ class TestPowerImpact(unittest.TestCase):
         """Testa leitura da taxa de descarga via power_now."""
         m_exists.side_effect = lambda p: "power_now" in p or "type" in p or "/sys/class/power_supply/" in p
         m_listdir.return_value = ["BAT0"]
-        
 
-        m_open.side_effect = [
-            mock_open(read_data="Battery").return_value,
-            mock_open(read_data="15000000").return_value
-        ]
-        
+        m_open.side_effect = [mock_open(read_data="Battery").return_value, mock_open(read_data="15000000").return_value]
+
         rate = self.power_manager.get_system_discharge_rate()
         self.assertEqual(rate, 15.0)
 
@@ -52,9 +48,10 @@ class TestPowerImpact(unittest.TestCase):
         mock_on_batt.return_value = True
         mock_res.return_value = (10.0, 50.0)
         mock_sys_cpu.return_value = 20.0
-        
+
         impact = self.power_manager.estimate_app_impact()
         self.assertEqual(impact, 50.0)
+
 
 if __name__ == "__main__":
     unittest.main()

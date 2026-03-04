@@ -1,8 +1,10 @@
-import unittest
 import os
 import shutil
+import unittest
+
 from smartsort.cli.config import load_config
 from smartsort.core.engine import FileProcessor
+
 
 class TestPathSafety(unittest.TestCase):
     def test_load_config_from_any_dir(self):
@@ -11,10 +13,9 @@ class TestPathSafety(unittest.TestCase):
         root_config_path = os.path.join(os.getcwd(), "config", "config.yaml")
         self.assertTrue(os.path.exists(root_config_path), "Root config.yaml deve existir para este teste")
 
-
         test_dir = os.path.join(os.getcwd(), "tests", "tmp_dir")
         os.makedirs(test_dir, exist_ok=True)
-        
+
         orig_cwd = os.getcwd()
         try:
             os.chdir(test_dir)
@@ -31,15 +32,15 @@ class TestPathSafety(unittest.TestCase):
         config = {
             "destination_base_folder": "data/sorted",
             "ai_classification": {"enabled": False},
-            "power_saving": {"enabled": False}
+            "power_saving": {"enabled": False},
         }
         processor = FileProcessor(config)
-        
 
         self.assertTrue(processor.project_root.endswith("SmartSort"))
 
         self.assertTrue(os.path.isabs(processor.destination_base))
         self.assertIn(processor.project_root, processor.destination_base)
+
 
 if __name__ == "__main__":
     unittest.main()
