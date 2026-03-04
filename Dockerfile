@@ -19,11 +19,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Criar estrutura de pastas necessária
+RUN mkdir -p config data models
+
 # Copiar o código fonte e arquivos necessários
 COPY src/ ./src/
 COPY config/ ./config/
 COPY data/ ./data/
-COPY models/ ./models/
 
 # Comando padrão
 CMD ["python3", "-m", "smartsort"]
