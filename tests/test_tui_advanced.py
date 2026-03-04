@@ -34,7 +34,10 @@ class TestTUIAdvanced(unittest.TestCase):
         
         with patch("smartsort.cli.tui.Prompt.ask", return_value=""):
             tui.show_logs(lines=2)
-            mock_file.assert_called_with("data/smartsort.log", "r")
+            # A TUI agora resolve o caminho absoluto relativo ao arquivo
+            call_args = mock_file.call_args[0][0]
+            self.assertTrue(os.path.isabs(call_args))
+            self.assertTrue(call_args.endswith("data/smartsort.log"))
 
 if __name__ == "__main__":
     unittest.main()

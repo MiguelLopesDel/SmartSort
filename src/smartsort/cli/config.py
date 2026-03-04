@@ -11,7 +11,9 @@ app = typer.Typer(help="CLI de Configuração do SmartSort")
 console = Console()
 
 def load_config():
-    config_path = "config/config.yaml"
+
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    config_path = os.path.join(project_root, "config", "config.yaml")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
@@ -20,7 +22,9 @@ def load_config():
         return None
 
 def save_config(config):
-    config_path = "config/config.yaml"
+
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    config_path = os.path.join(project_root, "config", "config.yaml")
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(config, f)

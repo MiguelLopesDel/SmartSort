@@ -17,15 +17,24 @@ from smartsort.utils.recommender import HardwareRecommender
 class FileProcessor:
     def __init__(self, config):
         self.config = config
+
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        
         self.ai_config = config.get("ai_classification", {})
         self.power_manager = PowerManager(config)
         self.recommender = HardwareRecommender(config)
-        self.destination_base = config.get("destination_base_folder", "data/sorted")
+        
+        dest_base = config.get("destination_base_folder", "data/sorted")
+        if not os.path.isabs(dest_base):
+            self.destination_base = os.path.join(self.project_root, dest_base)
+        else:
+            self.destination_base = dest_base
+            
         self.fallback_rules = config.get("fallback_rules", {})
 
-
-        os.environ["HF_HOME"] = os.path.abspath("models/hf_cache")
-        os.makedirs("models/hf_cache", exist_ok=True)
+        hf_cache = os.path.join(self.project_root, "models", "hf_cache")
+        os.environ["HF_HOME"] = hf_cache
+        os.makedirs(hf_cache, exist_ok=True)
 
         self.ml_model = None
         self.zero_shot_classifier = None
@@ -78,7 +87,11 @@ class FileProcessor:
             logger.info(f"[AUTO] Hardware: {provider.upper()} em {device.upper()} (Bateria: {on_battery})")
 
         if mode == "local_ml":
-            model_path = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
+            model_path_rel = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
+            if not os.path.isabs(model_path_rel):
+                model_path = os.path.join(self.project_root, model_path_rel)
+            else:
+                model_path = model_path_rel
             try:
                 self.ml_model = joblib.load(model_path)
                 logger.info(f"Modelo de IA Local ({model_path}) carregado.")
@@ -98,7 +111,7 @@ class FileProcessor:
                     self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name, device=0)
 
                 elif accel_config.get("enabled") and provider == "openvino":
-                    ov_cache_dir = os.path.join("models", "ov_cache", model_name.replace("/", "_"))
+                    ov_cache_dir = os.path.join(self.project_root, "models", "ov_cache", model_name.replace("/", "_"))
                     from optimum.intel.openvino import OVModelForSequenceClassification
 
                     if os.path.exists(ov_cache_dir):

@@ -42,13 +42,26 @@ class SmartSortTUI:
         table.add_column("Modo IA", style="magenta")
         table.add_column("Aceleração", style="yellow")
         table.add_column("Energia", style="cyan")
+        table.add_column("Impacto App", style="red")
         
         dirs = len(self.config.get("directories_to_watch", []))
         ai_mode = self.config["ai_classification"].get("mode", "off")
         accel = f"{p.upper()} ({d})"
-        power = "🔋 Bateria" if on_battery else "🔌 Tomada"
         
-        table.add_row(f"{dirs} pastas", ai_mode, accel, power)
+        if on_battery:
+            battery_pct = pm.get_battery_percent()
+            app_impact = pm.estimate_app_impact()
+            discharge = pm.get_system_discharge_rate()
+            
+            power_str = f"🔋 {battery_pct}%"
+            impact_str = f"{app_impact:.1f}% do uso"
+            if discharge:
+                impact_str += f" ({discharge:.1f}W sys)"
+        else:
+            power_str = "🔌 Tomada"
+            impact_str = "N/A"
+        
+        table.add_row(f"{dirs} pastas", ai_mode, accel, power_str, impact_str)
         return table
 
     def main_menu(self):
@@ -97,7 +110,9 @@ class SmartSortTUI:
                 break
 
     def show_logs(self, lines=15):
-        log_path = "data/smartsort.log"
+
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        log_path = os.path.join(project_root, "data", "smartsort.log")
         if os.path.exists(log_path):
             with open(log_path, "r") as f:
                 content = f.readlines()
