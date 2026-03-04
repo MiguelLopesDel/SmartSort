@@ -28,6 +28,12 @@ jobs:
             # Testa se o script consegue instalar as dependencias de sistema REAIS
             ./scripts/install.sh --skip-update | grep -E 'Distribuição detectada|Verificando dependências'
 
-            # Valida se o tesseract foi instalado com sucesso pela distro
-            tesseract --version | grep 'tesseract'
+            # Validação robusta do Tesseract
+            if command -v tesseract > /dev/null; then
+              echo '✅ Tesseract instalado com sucesso!'
+              tesseract --version | grep 'tesseract'
+            else
+              echo '❌ ERRO: Tesseract não foi instalado pelo script!'
+              exit 1
+            fi
           "
