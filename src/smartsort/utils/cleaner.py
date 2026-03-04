@@ -3,7 +3,9 @@ import os
 import sys
 import tokenize
 
-from smartsort.utils.logger import logger
+from rich.console import Console
+
+console = Console()
 
 
 def remove_python_comments(filepath):
@@ -11,21 +13,19 @@ def remove_python_comments(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             source = f.read()
     except Exception as e:
-        logger.error(f"Erro ao ler {filepath}: {e}")
+        console.print(f"[red]Erro ao ler {filepath}: {e}[/red]")
         return
 
     comments = []
     try:
-
         tokens = tokenize.tokenize(io.BytesIO(source.encode("utf-8")).readline)
         for tok in tokens:
             if tok.type == tokenize.COMMENT:
                 comments.append((tok.start, tok.end))
     except (tokenize.TokenError, IndentationError):
-
         pass
     except Exception as e:
-        logger.error(f"Erro ao processar tokens de Python {filepath}: {e}")
+        console.print(f"[red]Erro ao processar tokens de Python {filepath}: {e}[/red]")
         return
 
     if not comments:
@@ -34,31 +34,20 @@ def remove_python_comments(filepath):
     lines = source.splitlines(keepends=True)
 
     for start, end in reversed(comments):
-        start_row, _ = start
-        end_row, _ = end
-
         s_row, s_col = start
         e_row, e_col = end
-
         line_idx = s_row - 1
         line = lines[line_idx]
-
-        if line[:s_col].strip() == "":
-
-            lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
-
-        else:
-
-            lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
+        lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
 
     final_content = "".join(lines)
 
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(final_content)
-        logger.info(f"Comentários removidos (Python): [blue]{filepath}[/blue]")
+        console.print(f"[green]INFO[/green]     Comentários removidos (Python): [blue]{filepath}[/blue]")
     except Exception as e:
-        logger.error(f"Erro ao escrever Python {filepath}: {e}")
+        console.print(f"[red]Erro ao escrever Python {filepath}: {e}[/red]")
 
 
 def remove_shell_comments(filepath):
@@ -66,7 +55,7 @@ def remove_shell_comments(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
-        logger.error(f"Erro ao ler {filepath}: {e}")
+        console.print(f"[red]Erro ao ler {filepath}: {e}[/red]")
         return
 
     result = []
@@ -106,7 +95,6 @@ def remove_shell_comments(filepath):
         if char == "#" and not in_single_quote and not in_double_quote:
             is_start_of_word = i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
             if is_start_of_word:
-
                 if i == 0 and content.startswith("#!"):
                     newline_pos = content.find("\n", i)
                     if newline_pos == -1:
@@ -117,13 +105,10 @@ def remove_shell_comments(filepath):
                         i = newline_pos
                         continue
                 else:
-
                     modified = True
                     newline_pos = content.find("\n", i)
-
                     while len(result) > 0 and result[-1] in (" ", "\t"):
                         result.pop()
-
                     if newline_pos == -1:
                         break
                     else:
@@ -139,14 +124,14 @@ def remove_shell_comments(filepath):
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write("".join(result))
-        logger.info(f"Comentários removidos (Shell): [blue]{filepath}[/blue]")
+        console.print(f"[green]INFO[/green]     Comentários removidos (Shell): [blue]{filepath}[/blue]")
     except Exception as e:
-        logger.error(f"Erro ao escrever Shell {filepath}: {e}")
+        console.print(f"[red]Erro ao escrever Shell {filepath}: {e}[/red]")
 
 
 def main():
     if len(sys.argv) < 2:
-        logger.warning("Uso: python -m smartsort.utils.cleaner <arquivo_ou_diretorio>")
+        console.print("[yellow]Uso: python -m smartsort.utils.cleaner <arquivo_ou_diretorio>[/yellow]")
         sys.exit(1)
 
     targets = sys.argv[1:]

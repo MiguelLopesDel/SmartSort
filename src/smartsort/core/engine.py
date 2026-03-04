@@ -42,6 +42,8 @@ class FileProcessor:
         self.zero_shot_classifier = None
         self._current_model_name = None
         self._current_mode = None
+        self._last_battery_state = None
+        self._last_provider = None
 
         self._load_models()
 
@@ -87,7 +89,15 @@ class FileProcessor:
         if accel_config.get("enabled") and provider == "auto":
             on_battery = self.power_manager.is_on_battery()
             provider, device = self.recommender.get_best_acceleration(on_battery)
-            logger.info(f"[AUTO] Hardware: {provider.upper()} em {device.upper()} (Bateria: {on_battery})")
+
+            if on_battery != self._last_battery_state or provider != self._last_provider:
+                status = "🔋 BATERIA" if on_battery else "🔌 TOMADA"
+                logger.info(
+                    f"Monitor de Energia: [bold]{status}[/bold]. "
+                    f"Usando aceleração: [yellow]{provider.upper()} ({device.upper()})[/yellow]"
+                )
+                self._last_battery_state = on_battery
+                self._last_provider = provider
 
         if mode == "local_ml":
             model_path_rel = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
