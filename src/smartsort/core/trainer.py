@@ -1,4 +1,5 @@
 import os
+from typing import List, Tuple
 
 import joblib
 from sklearn.ensemble import RandomForestClassifier
@@ -8,7 +9,9 @@ from sklearn.pipeline import Pipeline
 from smartsort.utils.logger import logger
 
 
-def treinar_modelo_local(dados_treino, caminho_modelo="models/modelo_classificador.joblib"):
+def treinar_modelo_local(
+    dados_treino: List[Tuple[str, str]], caminho_modelo: str = "models/modelo_classificador.joblib"
+) -> None:
     """
     Treina um modelo simples de ML (Random Forest) para classificação local.
     dados_treino: Lista de tuplos (texto, categoria)

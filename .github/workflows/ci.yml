@@ -77,12 +77,13 @@ jobs:
         run: find . -name "*.sh" -exec bash -n {} +
 
       - name: Code Style Check (Flake8)
-        run: flake8 src/ tests/ --max-line-length=120 --extend-ignore=E203 --count --statistics
+        run: flake8 src/ tests/
 
       - name: Run tests with Coverage
         env:
           PYTHONPATH: src
         run: pytest
+        timeout-minutes: 5
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

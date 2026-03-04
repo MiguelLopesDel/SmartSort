@@ -7,11 +7,6 @@ joblib
 scikit-learn
 transformers
 torch
-pytest
-pytest-mock
-black
-isort
-flake8
 psutil>=5.9.0
 typer
 rich

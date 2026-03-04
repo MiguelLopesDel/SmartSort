@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Any, Dict, Optional
 
 import typer
 import yaml
@@ -12,7 +13,7 @@ app = typer.Typer(help="CLI de Configuração do SmartSort")
 console = Console()
 
 
-def load_config():
+def load_config() -> Optional[Dict[str, Any]]:
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     config_path = os.path.join(project_root, "config", "config.yaml")
@@ -24,7 +25,7 @@ def load_config():
         return None
 
 
-def save_config(config):
+def save_config(config: Dict[str, Any]) -> bool:
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     config_path = os.path.join(project_root, "config", "config.yaml")
@@ -37,7 +38,7 @@ def save_config(config):
         return False
 
 
-def show_config():
+def show_config() -> None:
     config = load_config()
     if not config:
         return
@@ -54,7 +55,7 @@ def show_config():
     console.print(table)
 
 
-def set_model(name: str):
+def set_model(name: str) -> None:
     config = load_config()
     if not config:
         return
@@ -65,7 +66,7 @@ def set_model(name: str):
         console.print(f"Modelo alterado para: [cyan]{name}[/cyan]")
 
 
-def show_status():
+def show_status() -> None:
     config = load_config()
     if not config:
         return
@@ -89,7 +90,7 @@ def show_status():
     console.print(status_table)
 
 
-def add_directory(path: str):
+def add_directory(path: str) -> None:
     config = load_config()
     if not config:
         return
@@ -109,22 +110,22 @@ def add_directory(path: str):
 
 
 @app.command(name="show")
-def cli_show():
+def cli_show() -> None:
     show_config()
 
 
 @app.command(name="model")
-def cli_model(name: str):
+def cli_model(name: str) -> None:
     set_model(name)
 
 
 @app.command(name="status")
-def cli_status():
+def cli_status() -> None:
     show_status()
 
 
 @app.command(name="accel")
-def cli_accel():
+def cli_accel() -> None:
     from smartsort.utils.recommender import HardwareRecommender
 
     config = load_config()
@@ -134,12 +135,12 @@ def cli_accel():
 
 
 @app.command(name="add")
-def cli_add(path: str):
+def cli_add(path: str) -> None:
     add_directory(path)
 
 
 @app.command(name="tui")
-def cli_tui():
+def cli_tui() -> None:
     from smartsort.cli.tui import start_tui
 
     start_tui()

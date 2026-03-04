@@ -1,4 +1,5 @@
 import platform
+from typing import Any, Tuple
 
 import psutil
 
@@ -6,10 +7,10 @@ from smartsort.utils.logger import logger
 
 
 class HardwareRecommender:
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         self.config = config
 
-    def get_best_acceleration(self, on_battery=False):
+    def get_best_acceleration(self, on_battery: bool = False) -> Tuple[str, str]:
         """
         Recomenda o melhor par (provider, device) baseado no hardware atual.
         """
@@ -30,16 +31,16 @@ class HardwareRecommender:
 
         return "auto", "CPU"
 
-    def _check_nvidia_gpu(self):
+    def _check_nvidia_gpu(self) -> bool:
 
         try:
             import torch
 
-            return torch.cuda.is_available()
+            return bool(torch.cuda.is_available())
         except ImportError:
             return False
 
-    def show_analysis(self):
+    def show_analysis(self) -> None:
         on_battery = False
         try:
             battery = psutil.sensors_battery()

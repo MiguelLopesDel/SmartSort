@@ -9,7 +9,7 @@ from rich.logging import RichHandler
 console = Console()
 
 
-def setup_logger(name="smartsort", log_level=logging.INFO):
+def setup_logger(name: str = "smartsort", log_level: int = logging.INFO) -> logging.Logger:
     """
     Configura um logger estruturado com suporte a console (Rich) e ficheiro.
     """

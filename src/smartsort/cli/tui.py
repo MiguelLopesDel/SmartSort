@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from typing import Any, Dict
 
 from rich import box
 from rich.console import Console
@@ -15,14 +16,15 @@ console = Console()
 
 
 class SmartSortTUI:
-    def __init__(self):
-        self.config = load_config()
-        if not self.config:
+    def __init__(self) -> None:
+        config = load_config()
+        if not config:
             console.print("[red]Erro ao carregar configuração. Abortando TUI.[/red]")
             sys.exit(1)
+        self.config: Dict[str, Any] = config
         self.pm = PowerManager(self.config)
 
-    def draw_header(self):
+    def draw_header(self) -> Panel:
         return Panel(
             "[bold blue]SmartSort - Painel de Controle Interativo[/bold blue]\n"
             "[dim]Use os números para navegar e configurar seu sistema[/dim]",
@@ -30,7 +32,7 @@ class SmartSortTUI:
             style="cyan",
         )
 
-    def draw_status_summary(self):
+    def draw_status_summary(self) -> Table:
         from smartsort.utils.recommender import HardwareRecommender
 
         rec = HardwareRecommender(self.config)
@@ -65,7 +67,7 @@ class SmartSortTUI:
         table.add_row(f"{dirs} pastas", ai_mode, accel, power_str, impact_str)
         return table
 
-    def main_menu(self):
+    def main_menu(self) -> None:
         while True:
             console.clear()
             console.print(self.draw_header())
@@ -90,13 +92,17 @@ class SmartSortTUI:
                 path = Prompt.ask("Digite o caminho completo da pasta")
                 if path:
                     add_directory(path)
-                    self.config = load_config()
+                    new_config = load_config()
+                    if new_config:
+                        self.config = new_config
                     time.sleep(1.5)
             elif choice == 3:
                 model = Prompt.ask("Digite o nome do modelo (ex: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)")
                 if model:
                     set_model(model)
-                    self.config = load_config()
+                    new_config = load_config()
+                    if new_config:
+                        self.config = new_config
                     time.sleep(1.5)
             elif choice == 4:
                 enabled = self.config["acceleration"].get("enabled", False)
@@ -110,7 +116,7 @@ class SmartSortTUI:
                 console.print("[yellow]Saindo do modo TUI...[/yellow]")
                 break
 
-    def show_logs(self, lines=15):
+    def show_logs(self, lines: int = 15) -> None:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         log_path = os.path.join(project_root, "data", "smartsort.log")
         if os.path.exists(log_path):
@@ -123,7 +129,7 @@ class SmartSortTUI:
         Prompt.ask("\nPressione Enter para voltar")
 
 
-def start_tui():
+def start_tui() -> None:
     tui = SmartSortTUI()
     tui.main_menu()
 

@@ -1,8 +1,9 @@
 import os
 import time
+from typing import Any, Dict, Optional
 
 import yaml
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from smartsort.core.engine import FileProcessor
@@ -10,10 +11,10 @@ from smartsort.utils.logger import logger
 
 
 class SmartSortHandler(FileSystemEventHandler):
-    def __init__(self, processor):
+    def __init__(self, processor: FileProcessor) -> None:
         self.processor = processor
 
-    def on_created(self, event):
+    def on_created(self, event: FileSystemEvent) -> None:
         if not event.is_directory:
             logger.info(f"Novo ficheiro detetado: [bold cyan]{event.src_path}[/bold cyan]")
             self.processor.process_file(event.src_path)
@@ -22,7 +23,7 @@ class SmartSortHandler(FileSystemEventHandler):
             self.processor.process_file(event.src_path)
 
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: Dict[str, Any] = {
     "directories_to_watch": [],
     "destination_base_folder": "data/sorted",
     "ai_classification": {"enabled": False},
@@ -31,7 +32,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_config(config_path="config/config.yaml"):
+def load_config(config_path: str = "config/config.yaml") -> Optional[Dict[str, Any]]:
     try:
         if not os.path.exists(config_path):
             return DEFAULT_CONFIG
@@ -43,7 +44,7 @@ def load_config(config_path="config/config.yaml"):
         return None
 
 
-def main():
+def main() -> None:
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     config_path = os.path.join(project_root, "config", "config.yaml")
@@ -63,7 +64,7 @@ def main():
     observer = Observer()
     handler = SmartSortHandler(processor)
 
-    def setup_observer(cfg):
+    def setup_observer(cfg: Dict[str, Any]) -> None:
         observer.unschedule_all()
         directories = cfg.get("directories_to_watch", [])
         for directory in directories:
@@ -80,7 +81,7 @@ def main():
     logger.info("[bold green]SmartSort em execução. Pressione Ctrl+C para parar.[/bold green]")
 
     try:
-        last_mtime = 0
+        last_mtime = 0.0
         if os.path.exists(config_path):
             last_mtime = os.path.getmtime(config_path)
 
