@@ -21,3 +21,5 @@ isort
 mypy
 bandit
 safety
+types-PyYAML
+types-psutil
