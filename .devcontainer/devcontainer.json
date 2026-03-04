@@ -1,0 +1,49 @@
+{
+  "name": "SmartSort Dev Environment",
+  "image": "smartsort-backup",
+
+  // Adiciona ferramentas extras de forma modular
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Configurações específicas do VS Code dentro do container
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.black-formatter",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "christian-kohler.path-intellisense",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "eamodio.gitlens",
+        "streetsidesoftware.code-spell-checker-portuguese"
+      ]
+    }
+  },
+
+  // Portas que você quer expor (ex: porta do servidor web)
+  "forwardPorts": [3000],
+
+  // Comando para rodar após o container ser criado (ex: instalar dependências)
+  "postCreateCommand": "pip3 install pypdf pytesseract Pillow joblib transformers torch",
+
+  // Usuário padrão para imagens Python da Microsoft
+  "remoteUser": "vscode",
+
+  // Forçar o encaminhamento do SSH Agent no Linux (Arch)
+  "runArgs": [
+    "--mount", "type=bind,source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent.socket"
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/tmp/ssh-agent.socket"
+  }
+}
