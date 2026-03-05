@@ -94,7 +94,7 @@ def test_process_file_handles_collision(processor, tmp_path, mocker):
 
     processor.process_file(str(file_path))
 
-    expected_path = dest_category_dir / "collision_123456789.txt"
+    expected_path = dest_category_dir / "collision_123456789000.txt"
     assert expected_path.exists()
     assert existing_file.read_text() == "old content"
     assert expected_path.read_text() == "new content"
@@ -140,7 +140,7 @@ def test_process_file_shutil_move_error_handling(processor, tmp_path, mocker):
     processor.process_file(str(file_path))
 
     assert mock_logger.called
-    assert "Erro crítico" in mock_logger.call_args[0][0]
+    assert "Erro ao processar" in mock_logger.call_args[0][0]
 
 
 def test_extract_text_from_pdf_success(processor, mocker):
@@ -156,4 +156,4 @@ def test_extract_text_from_pdf_success(processor, mocker):
 
     with patch("builtins.open", mock_open()):
         text = processor.extract_text_from_pdf("test.pdf")
-        assert text == "Texto da Página\\n"
+        assert text == "Texto da Página"

@@ -1,8 +1,10 @@
+import gc
 import os
 import re
 import shutil
 import time
-from typing import Any, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 import joblib
 import pypdf
@@ -16,28 +18,24 @@ from smartsort.utils.recommender import HardwareRecommender
 
 
 class FileProcessor:
-    def __init__(self, config: Any) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config
-
-        self.project_root = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        )
+        self.project_root = Path(__file__).resolve().parent.parent.parent.parent
 
         self.ai_config = config.get("ai_classification", {})
         self.power_manager = PowerManager(config)
         self.recommender = HardwareRecommender(config)
 
         dest_base = config.get("destination_base_folder", "data/sorted")
-        if not os.path.isabs(dest_base):
-            self.destination_base = os.path.join(self.project_root, dest_base)
-        else:
-            self.destination_base = dest_base
+        self.destination_base = Path(dest_base)
+        if not self.destination_base.is_absolute():
+            self.destination_base = self.project_root / dest_base
 
         self.fallback_rules = config.get("fallback_rules", {})
 
-        hf_cache = os.path.join(self.project_root, "models", "hf_cache")
-        os.environ["HF_HOME"] = hf_cache
-        os.makedirs(hf_cache, exist_ok=True)
+        hf_cache = self.project_root / "models" / "hf_cache"
+        os.environ["HF_HOME"] = str(hf_cache)
+        hf_cache.mkdir(parents=True, exist_ok=True)
 
         self.ml_model: Optional[Any] = None
         self.zero_shot_classifier: Optional[Any] = None
@@ -51,18 +49,16 @@ class FileProcessor:
         self._load_models()
         self._load_audio_model()
 
-    def update_config(self, new_config: Any) -> None:
-        """Atualiza a configuração e recarrega modelos apenas se necessário."""
+    def update_config(self, new_config: Dict[str, Any]) -> None:
         old_ai = self.config.get("ai_classification", {})
         new_ai = new_config.get("ai_classification", {})
-
         old_accel = self.config.get("acceleration", {})
         new_accel = new_config.get("acceleration", {})
 
         self.config = new_config
         self.ai_config = new_ai
         self.power_manager.config = new_config
-        self.destination_base = new_config.get("destination_base_folder", "data/sorted")
+        self.destination_base = Path(new_config.get("destination_base_folder", "data/sorted"))
         self.fallback_rules = new_config.get("fallback_rules", {})
 
         if (
@@ -70,24 +66,26 @@ class FileProcessor:
             or old_ai.get("zero_shot_model") != new_ai.get("zero_shot_model")
             or old_accel != new_accel
         ):
-            logger.info("Alteração detectada em configurações de IA/Aceleração. Recarregando modelos...")
+            logger.info("Alteração em IA/Aceleração. Recarregando modelos...")
             self._load_models()
             self._load_audio_model()
-        else:
-            logger.debug("Configuração atualizada (sem necessidade de recarregar modelos de IA).")
+
+    def _unload_model(self, model_attr: str) -> None:
+        if hasattr(self, model_attr) and getattr(self, model_attr) is not None:
+            setattr(self, model_attr, None)
+            gc.collect()
 
     def _load_audio_model(self) -> None:
-        """Carrega o modelo Whisper baseado no estado de energia."""
         audio_cfg = self.config.get("audio_classification", {"enabled": False})
         if not audio_cfg.get("enabled"):
-            self.whisper_model = None
+            self._unload_model("whisper_model")
             return
 
         on_battery = self.power_manager.is_on_battery()
         profile = audio_cfg.get("battery_mode" if on_battery else "ac_mode", {})
 
         if not profile.get("enabled"):
-            self.whisper_model = None
+            self._unload_model("whisper_model")
             return
 
         model_name = profile.get("model", "tiny")
@@ -99,7 +97,8 @@ class FileProcessor:
         try:
             import whisper
 
-            logger.info(f"Carregando Inteligência de Áudio ({model_name}) em {device.upper()}...")
+            self._unload_model("whisper_model")
+            logger.info(f"Carregando Whisper ({model_name}) em {device.upper()}...")
             self.whisper_model = whisper.load_model(model_name, device=device)
             self._current_audio_model = f"{model_name}_{device}"
         except Exception as e:
@@ -107,293 +106,187 @@ class FileProcessor:
             self.whisper_model = None
 
     def _load_models(self) -> None:
-        """Lógica interna de carregamento de modelos com cache local."""
         ai_config = self.config.get("ai_classification", {})
         accel_config = self.config.get("acceleration", {"enabled": False})
 
         if not ai_config.get("enabled", False):
-            self.ml_model = None
-            self.zero_shot_classifier = None
+            self._unload_model("ml_model")
+            self._unload_model("zero_shot_classifier")
             return
 
         mode = ai_config.get("mode")
-
         provider = accel_config.get("provider", "auto")
         device = accel_config.get("device", "auto")
 
         if accel_config.get("enabled") and provider == "auto":
             on_battery = self.power_manager.is_on_battery()
             provider, device = self.recommender.get_best_acceleration(on_battery)
-
-            if on_battery != self._last_battery_state or provider != self._last_provider:
-                status = "🔋 BATERIA" if on_battery else "🔌 TOMADA"
-                logger.info(
-                    f"Monitor de Energia: [bold]{status}[/bold]. "
-                    f"Usando aceleração: [yellow]{provider.upper()} ({device.upper()})[/yellow]"
-                )
-                self._last_battery_state = on_battery
-                self._last_provider = provider
+            self._last_battery_state = on_battery
+            self._last_provider = provider
 
         if mode == "local_ml":
+            self._unload_model("zero_shot_classifier")
             model_path_rel = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
-            if not os.path.isabs(model_path_rel):
-                model_path = os.path.join(self.project_root, model_path_rel)
-            else:
-                model_path = model_path_rel
+            model_path = self.project_root / model_path_rel
             try:
-                self.ml_model = joblib.load(model_path)
-                logger.info(f"Modelo de IA Local ({model_path}) carregado.")
+                self.ml_model = joblib.load(str(model_path))
+                logger.info(f"Modelo Local ({model_path.name}) carregado.")
             except Exception as e:
-                logger.warning(f"Não foi possível carregar o modelo de ML: {e}")
+                logger.warning(f"Erro ao carregar ML: {e}")
 
         elif mode == "zero_shot":
+            self._unload_model("ml_model")
             model_name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
-
             if model_name == self._current_model_name and provider == self._current_mode:
                 return
 
             try:
+                self._unload_model("zero_shot_classifier")
                 if accel_config.get("enabled") and provider == "cuda":
                     logger.info(f"Carregando Zero-Shot para CUDA... ({model_name})")
                     self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name, device=0)
-
                 elif accel_config.get("enabled") and provider == "openvino":
-                    ov_cache_dir = os.path.join(self.project_root, "models", "ov_cache", model_name.replace("/", "_"))
+                    ov_cache_dir = self.project_root / "models" / "ov_cache" / model_name.replace("/", "_")
                     from optimum.intel.openvino import OVModelForSequenceClassification
 
-                    if os.path.exists(ov_cache_dir):
-                        logger.debug(f"Usando Cache OpenVINO: {ov_cache_dir}")
-                        model = OVModelForSequenceClassification.from_pretrained(ov_cache_dir, device=device.upper())
+                    if ov_cache_dir.exists():
+                        model = OVModelForSequenceClassification.from_pretrained(
+                            str(ov_cache_dir), device=device.upper()
+                        )
                     else:
-                        logger.info(f"Exportando {model_name} para OpenVINO (Cache Local)...")
-                        os.makedirs(ov_cache_dir, exist_ok=True)
+                        ov_cache_dir.mkdir(parents=True, exist_ok=True)
                         model = OVModelForSequenceClassification.from_pretrained(
                             model_name,
                             export=True,
                             device=device.upper(),
                             load_in_8bit=(accel_config.get("quantization") == "int8"),
                         )
-                        model.save_pretrained(ov_cache_dir)
-
+                        model.save_pretrained(str(ov_cache_dir))
                     tokenizer = AutoTokenizer.from_pretrained(model_name)
                     self.zero_shot_classifier = pipeline("zero-shot-classification", model=model, tokenizer=tokenizer)
                 else:
-                    logger.info(f"Carregando Zero-Shot padrão (CPU)... ({model_name})")
                     self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
 
                 self._current_model_name = model_name
                 self._current_mode = provider
             except Exception as e:
-                logger.exception(f"Falha ao carregar modelo de IA: {e}")
+                logger.exception(f"Erro ao carregar IA: {e}")
 
     def sanitize_category(self, category_name: Any) -> str:
         if not category_name:
             return "Desconhecido"
+        name = str(category_name).strip()
+        name = re.sub(r"[^\w\s\-_]", "", name)
+        name = name.replace("..", "").replace("/", "").replace("\\", "")
+        return name if name else "Desconhecido"
 
-        safe_name = re.sub(r"[^\w\s\-_]", "", str(category_name))
-        safe_name = safe_name.strip()
-        return safe_name if safe_name else "Desconhecido"
+    def process_file(self, file_path_str: str) -> None:
+        file_path = Path(file_path_str).resolve()
+        if not file_path.exists() or file_path.is_dir():
+            return
 
-    def process_existing_files(self) -> None:
-        """Varre os diretórios configurados e processa ficheiros já existentes."""
-        directories = self.config.get("directories_to_watch", [])
-        logger.info(f"A verificar ficheiros existentes em: {directories}")
+        if any(parent == self.project_root for parent in file_path.parents) or file_path == self.project_root:
+            return
 
-        for directory in directories:
-            if not os.path.exists(directory):
-                logger.warning(f"Diretório não encontrado: {directory}")
-                continue
+        filename = file_path.name
+        if filename.startswith(".") or filename.endswith((".part", ".crdownload", ".tmp", "~")):
+            return
 
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-
-                if os.path.isdir(file_path) or filename.startswith("."):
-                    continue
-
-                logger.debug(f"Ficheiro existente encontrado: {filename}")
-                self.process_file(file_path)
-
-    def log_history(self, filename: str, category: str, dest_path: str, confidence: Optional[float] = None) -> None:
-        """Regista a ação num ficheiro de histórico para consulta do utilizador."""
-        history_file = os.path.join(os.path.dirname(self.destination_base), "history.log")
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        conf_info = f" [Confiança: {confidence:.2f}]" if confidence is not None else ""
-
-        log_entry = f"[{timestamp}] {filename} -> {category}{conf_info} | Local: {dest_path}\n"
-
+        time.sleep(1)
         try:
-            with open(history_file, "a", encoding="utf-8") as f:
-                f.write(log_entry)
-        except Exception as e:
-            logger.error(f"Erro ao gravar no histórico: {e}")
-
-    def process_file(self, file_path: str) -> None:
-        if not os.path.exists(file_path):
-            return
-
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
-        if os.path.abspath(file_path).startswith(project_root):
-            return
-
-        filename = os.path.basename(file_path)
-
-        ignored_extensions = (
-            ".part",
-            ".crdownload",
-            ".tmp",
-            ".kate-swp",
-            ".swp",
-            ".swx",
-        )
-        if filename.startswith(".") or filename.endswith(ignored_extensions) or filename.endswith("~"):
-            return
-
-        time.sleep(2)
-        if not os.path.exists(file_path):
-            return
-
-        logger.info(f"A processar: [bold]{filename}[/bold] " f"({'Pasta' if os.path.isdir(file_path) else 'Ficheiro'})")
-
-        try:
-            category_raw, confidence = self.classify_file(file_path, filename)
+            category_raw, confidence = self.classify_file(str(file_path), filename)
             category = self.sanitize_category(category_raw)
 
-            target_dir = os.path.join(self.destination_base, category)
-            if not os.path.exists(target_dir):
-                os.makedirs(target_dir, exist_ok=True)
+            target_dir = self.destination_base / category
+            target_dir.mkdir(parents=True, exist_ok=True)
 
-            destination_path = os.path.join(target_dir, filename)
+            dest_path = target_dir / filename
+            if dest_path.exists():
+                timestamp = int(time.time() * 1000)
+                dest_path = target_dir / f"{file_path.stem}_{timestamp}{file_path.suffix}"
 
-            if os.path.exists(destination_path):
-                base, ext = os.path.splitext(filename)
-                destination_path = os.path.join(target_dir, f"{base}_{int(time.time())}{ext}")
-
-            shutil.move(file_path, destination_path)
-            logger.info(f"Sucesso: Movido para [green]{destination_path}[/green]")
-            self.log_history(filename, category, destination_path, confidence)
+            shutil.move(str(file_path), str(dest_path))
+            logger.info(f"Movido: [bold]{filename}[/bold] -> [green]{category}[/green]")
+            self.log_history(filename, category, str(dest_path), confidence)
+        except FileNotFoundError:
+            logger.warning(f"Arquivo desapareceu durante processamento: {filename}")
         except Exception as e:
-            logger.exception(f"Erro crítico ao processar {filename}: {e}")
+            logger.exception(f"Erro ao processar {filename}: {e}")
+
+    def process_existing_files(self) -> None:
+        directories = self.config.get("directories_to_watch", [])
+        for directory in directories:
+            dir_path = Path(directory)
+            if not dir_path.exists():
+                continue
+            for item in dir_path.iterdir():
+                if item.is_file():
+                    self.process_file(str(item))
+
+    def log_history(self, filename: str, category: str, dest_path: str, confidence: Optional[float] = None) -> None:
+        history_file = self.destination_base.parent / "history.log"
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        conf = f" [{confidence:.2f}]" if confidence is not None else ""
+        entry = f"[{ts}] {filename} -> {category}{conf} | {dest_path}\n"
+        try:
+            with open(history_file, "a", encoding="utf-8") as f:
+                f.write(entry)
+        except Exception as e:
+            logger.error(f"Erro histórico: {e}")
 
     def extract_text_from_pdf(self, file_path: str) -> str:
         try:
             with open(file_path, "rb") as f:
                 reader = pypdf.PdfReader(f)
-                text = ""
-                for page in reader.pages:
-                    extracted = page.extract_text()
-                    if extracted:
-                        text += extracted + "\\n"
-                return str(text.strip())
+                return " ".join(p.extract_text() or "" for p in reader.pages).strip()
         except Exception as e:
-            logger.error(f"Erro ao extrair texto do PDF: {e}")
+            logger.error(f"Erro PDF: {e}")
             return ""
 
     def extract_text_from_image(self, file_path: str) -> str:
         try:
-            image = Image.open(file_path)
-            text = pytesseract.image_to_string(image, lang="por")
-            return str(text).strip()
+            return str(pytesseract.image_to_string(Image.open(file_path), lang="por")).strip()
         except Exception as e:
-            if "por" in str(e) or "traineddata" in str(e):
-                logger.warning(
-                    "Aviso: Tesseract não encontrou o idioma 'por'. "
-                    "Por favor, instale 'tesseract-ocr-por' ou 'tesseract-data-por'."
-                )
-            else:
-                logger.error(f"Erro ao extrair texto da imagem: {e}")
+            logger.error(f"Erro OCR: {e}")
             return ""
 
     def classify_file(self, file_path: str, filename: str) -> Tuple[str, Optional[float]]:
-        ext = filename.split(".")[-1].lower() if "." in filename else ""
+        ext = Path(file_path).suffix.lower().lstrip(".")
+        video_exts = ("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm")
+        text = ""
 
-        video_extensions = ("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm")
-        extracted_text = ""
-
-        if ext in video_extensions:
-            if self.whisper_model:
-                try:
-                    logger.info(f"A analisar áudio de [yellow]{filename}[/yellow]...")
-                    result = self.whisper_model.transcribe(file_path)
-                    extracted_text = result.get("text", "")
-                    if extracted_text:
-                        logger.debug(f"Áudio transcrito: {extracted_text[:100]}...")
-                except Exception as e:
-                    logger.warning(f"Falha ao transcrever áudio: {e}")
-
-            if not extracted_text:
-                logger.info(
-                    f"Ficheiro de vídeo detetado: [yellow]{filename}[/yellow]. Usando organização por extensão."
-                )
+        if ext in video_exts and self.whisper_model:
+            try:
+                res = self.whisper_model.transcribe(file_path)
+                text = res.get("text", "")
+            except Exception:
                 return self.fallback_rules.get(ext, "Videos"), 1.0
 
-        elif self.power_manager.should_use_fallback():
-            logger.info(f"Modo Economia: Saltando IA pesada para [yellow]{filename}[/yellow].")
+        if not text and self.power_manager.should_use_fallback():
             return self.fallback_rules.get(ext, "Outros"), None
 
-        clean_filename = re.sub(r"[._-]", " ", filename.rsplit(".", 1)[0])
-
-        if not extracted_text:
+        if not text:
             if ext == "pdf":
-                logger.debug(f"A extrair texto do PDF {filename}...")
-                extracted_text = self.extract_text_from_pdf(file_path)
-            elif ext in ["jpg", "jpeg", "png"]:
-                logger.debug(f"A extrair texto da imagem {filename} via OCR...")
-                extracted_text = self.extract_text_from_image(file_path)
-            elif ext in ["txt", "md", "csv"]:
-                logger.debug(f"A extrair texto do ficheiro de texto {filename}...")
+                text = self.extract_text_from_pdf(file_path)
+            elif ext in ("jpg", "jpeg", "png"):
+                text = self.extract_text_from_image(file_path)
+            elif ext in ("txt", "md", "csv"):
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
-                        extracted_text = f.read()
-                except Exception as e:
-                    logger.error(f"Erro ao ler texto: {e}")
+                        text = f.read()
+                except Exception:
+                    pass
 
-        full_context = f"Ficheiro: {clean_filename}. Conteúdo: {extracted_text[:500]}"
-
-        if self.ai_config.get("enabled", False):
-            mode = self.ai_config.get("mode", "api")
-            logger.debug(f"Modo IA ativado: Usando ({mode}) para classificar...")
-
+        ctx = f"{filename} {text[:500]}"
+        if self.ai_config.get("enabled"):
+            mode = self.ai_config.get("mode")
             try:
-                if mode == "local":
-                    model = self.ai_config.get("local_model", "llama3")
-                    logger.debug(f"Simulando inferência com IA Local (Modelo: {model})...")
-                    ai_category = self.simulate_ai_classification(filename, extracted_text)
-                    return ai_category, None
-                elif mode == "local_ml" and self.ml_model:
-                    logger.debug("A usar Modelo de ML Local (scikit-learn)...")
-                    previsao = self.ml_model.predict([full_context])
-                    return str(previsao[0]), None
-                elif mode == "zero_shot" and self.zero_shot_classifier:
-                    logger.debug("A usar Modelo Zero-Shot HuggingFace...")
-                    categorias = self.ai_config.get(
-                        "categorias_disponiveis",
-                        ["Financas", "Trabalho", "Pessoal", "Saude", "Outros"],
-                    )
-
-                    resultado = self.zero_shot_classifier(full_context, categorias)
-                    cat = str(resultado["labels"][0])
-                    conf = float(resultado["scores"][0])
-                    logger.info(f"IA classificou como: [magenta]{cat}[/magenta] (Confiança: {conf:.2f})")
-                    return cat, conf
-                elif mode == "api":
-                    provider = self.ai_config.get("api_provider", "gemini")
-                    logger.debug(f"Simulando chamada de API Remota (Provider: {provider})...")
-                    ai_category = self.simulate_ai_classification(filename, extracted_text)
-                    return ai_category, None
-                else:
-                    logger.warning(f"Modo de IA desconhecido: {mode}. Usando fallback...")
-                    ai_category = None
-            except Exception as e:
-                logger.exception(f"Falha na IA: {e}. A recorrer ao fallback (regras)...")
-
+                if mode == "local_ml" and self.ml_model:
+                    return str(self.ml_model.predict([ctx])[0]), None
+                if mode == "zero_shot" and self.zero_shot_classifier:
+                    cats = self.ai_config.get("categorias_disponiveis", ["Outros"])
+                    res = self.zero_shot_classifier(ctx, cats)
+                    return str(res["labels"][0]), float(res["scores"][0])
+            except Exception:
+                pass
         return str(self.fallback_rules.get(ext, "Outros")), None
-
-    def simulate_ai_classification(self, filename: str, text: str = "") -> str:
-        name_lower = filename.lower()
-        text_lower = text.lower()
-
-        if "fatura" in name_lower or "recibo" in name_lower or "fatura" in text_lower or "recibo" in text_lower:
-            return "Financas"
-        elif "relatorio" in name_lower or "cv" in name_lower or "relatório" in text_lower:
-            return "Trabalho"
-        return "Outros"

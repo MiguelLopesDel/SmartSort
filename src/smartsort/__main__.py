@@ -1,5 +1,5 @@
-import os
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
@@ -33,27 +33,28 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 }
 
 
-def load_config(config_path: str = "config/config.yaml") -> Optional[Dict[str, Any]]:
+def load_config(config_path: Path) -> Optional[Dict[str, Any]]:
     try:
-        if not os.path.exists(config_path):
+        if not config_path.exists():
             return DEFAULT_CONFIG
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
-            return cfg if cfg else DEFAULT_CONFIG
+            if cfg is None:
+                return DEFAULT_CONFIG
+            return dict(cfg)
     except Exception as e:
         logger.error(f"Erro ao carregar o {config_path}: {e}")
         return None
 
 
 def main() -> None:
-
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    config_path = os.path.join(project_root, "config", "config.yaml")
+    project_root = Path(__file__).resolve().parent.parent.parent
+    config_path = project_root / "config" / "config.yaml"
     config = load_config(config_path)
 
     config_error_mode = False
     if config is None:
-        logger.error("Falha na configuração inicial. Entrando em modo de espera/recuperação.")
+        logger.error("Falha na configuração inicial. Entrando em modo de espera.")
         config = DEFAULT_CONFIG
         config_error_mode = True
 
@@ -69,11 +70,12 @@ def main() -> None:
         observer.unschedule_all()
         directories = cfg.get("directories_to_watch", [])
         for directory in directories:
-            if os.path.exists(directory):
-                observer.schedule(handler, directory, recursive=False)
-                logger.info(f"A monitorizar: [yellow]{directory}[/yellow]")
+            dir_path = Path(directory)
+            if dir_path.exists():
+                observer.schedule(handler, str(dir_path), recursive=False)
+                logger.info(f"A monitorizar: [yellow]{dir_path}[/yellow]")
             else:
-                logger.warning(f"O diretório [red]{directory}[/red] não existe.")
+                logger.warning(f"O diretório [red]{dir_path}[/red] não existe.")
 
     if not config_error_mode:
         setup_observer(config)
@@ -83,25 +85,25 @@ def main() -> None:
 
     try:
         last_mtime = 0.0
-        if os.path.exists(config_path):
-            last_mtime = os.path.getmtime(config_path)
+        if config_path.exists():
+            last_mtime = config_path.stat().st_mtime
 
         while True:
             time.sleep(5)
             try:
-                if os.path.exists(config_path):
-                    current_mtime = os.path.getmtime(config_path)
+                if config_path.exists():
+                    current_mtime = config_path.stat().st_mtime
                     if current_mtime > last_mtime or config_error_mode:
                         new_config = load_config(config_path)
                         if new_config:
-                            logger.info("Configuração atualizada/recuperada com sucesso!")
+                            logger.info("Configuração atualizada/recuperada!")
                             processor.update_config(new_config)
                             setup_observer(new_config)
                             last_mtime = current_mtime
                             config_error_mode = False
             except Exception:
                 if not config_error_mode:
-                    logger.error("Arquivo de configuração ainda contém erros. Mantendo modo de espera.")
+                    logger.error("Arquivo de configuração ainda contém erros.")
                     config_error_mode = True
 
     except KeyboardInterrupt:
