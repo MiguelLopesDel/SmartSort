@@ -19,7 +19,10 @@ def load_config() -> Optional[Dict[str, Any]]:
     config_path = os.path.join(project_root, "config", "config.yaml")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+            if data is None:
+                return None
+            return dict(data)
     except FileNotFoundError:
         logger.error(f"Arquivo de configuração não encontrado em {config_path}")
         return None

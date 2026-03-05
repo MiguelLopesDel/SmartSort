@@ -15,12 +15,13 @@ class SmartSortHandler(FileSystemEventHandler):
         self.processor = processor
 
     def on_created(self, event: FileSystemEvent) -> None:
+        src_path = str(event.src_path)
         if not event.is_directory:
-            logger.info(f"Novo ficheiro detetado: [bold cyan]{event.src_path}[/bold cyan]")
-            self.processor.process_file(event.src_path)
+            logger.info(f"Novo ficheiro detetado: [bold cyan]{src_path}[/bold cyan]")
+            self.processor.process_file(src_path)
         else:
-            logger.info(f"Nova pasta detetada: [bold cyan]{event.src_path}[/bold cyan]")
-            self.processor.process_file(event.src_path)
+            logger.info(f"Nova pasta detetada: [bold cyan]{src_path}[/bold cyan]")
+            self.processor.process_file(src_path)
 
 
 DEFAULT_CONFIG: Dict[str, Any] = {
