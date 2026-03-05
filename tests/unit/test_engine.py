@@ -32,6 +32,7 @@ def processor(config, mocker):
     return FileProcessor(config)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "category_in, expected",
     [
@@ -53,6 +54,7 @@ def test_sanitize_category_parametrized(processor, category_in, expected):
     assert processor.sanitize_category(category_in) == expected
 
 
+@pytest.mark.unit
 def test_process_file_normal_flow(processor, tmp_path, mocker):
     """
     GIVEN: Um arquivo PDF válido em uma pasta monitorada
@@ -73,6 +75,7 @@ def test_process_file_normal_flow(processor, tmp_path, mocker):
     assert expected_path.exists()
 
 
+@pytest.mark.unit
 def test_process_file_handles_collision(processor, tmp_path, mocker):
     """
     GIVEN: Um arquivo cujo nome já existe no destino
@@ -100,6 +103,7 @@ def test_process_file_handles_collision(processor, tmp_path, mocker):
     assert expected_path.read_text() == "new content"
 
 
+@pytest.mark.unit
 def test_process_file_ignores_temporary_and_hidden(processor, tmp_path, mocker):
     """
     GIVEN: Arquivos temporários (.tmp, .part) ou ocultos (.hidden)
@@ -124,6 +128,7 @@ def test_process_file_ignores_temporary_and_hidden(processor, tmp_path, mocker):
     assert move_spy.call_count == 0
 
 
+@pytest.mark.unit
 def test_process_file_shutil_move_error_handling(processor, tmp_path, mocker):
     """
     GIVEN: Uma falha catastrófica ao mover o arquivo (ex: permissão negada)
@@ -143,6 +148,7 @@ def test_process_file_shutil_move_error_handling(processor, tmp_path, mocker):
     assert "Erro ao processar" in mock_logger.call_args[0][0]
 
 
+@pytest.mark.unit
 def test_extract_text_from_pdf_success(processor, mocker):
     """
     GIVEN: Um PDF com texto extraível

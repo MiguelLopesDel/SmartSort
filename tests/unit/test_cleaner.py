@@ -5,6 +5,7 @@ import pytest
 from smartsort.utils.cleaner import main, remove_python_comments, remove_shell_comments
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "content, expected",
     [
@@ -34,6 +35,7 @@ def test_python_comment_removal_parametrized(tmp_path, content, expected):
     assert file.read_text(encoding="utf-8") == expected
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "content, expected",
     [
@@ -60,6 +62,7 @@ def test_shell_comment_removal_parametrized(tmp_path, content, expected):
     assert file.read_text(encoding="utf-8") == expected
 
 
+@pytest.mark.unit
 def test_cleaner_main_directory_walk(tmp_path):
     """
     GIVEN: Uma estrutura de diretórios com arquivos .py e .sh
@@ -82,6 +85,7 @@ def test_cleaner_main_directory_walk(tmp_path):
     assert sh_file.read_text(encoding="utf-8") == "ls"
 
 
+@pytest.mark.unit
 def test_cleaner_main_single_file(tmp_path):
     """
     GIVEN: Um único arquivo .py

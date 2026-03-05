@@ -22,6 +22,7 @@ def pm(config):
     return PowerManager(config)
 
 
+@pytest.mark.unit
 def test_is_on_battery_scenarios(pm, mocker):
     """
     GIVEN: Diferentes estados de conexão de energia
@@ -40,6 +41,7 @@ def test_is_on_battery_scenarios(pm, mocker):
     assert pm.is_on_battery() is False
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "percent, expected_percent",
     [
@@ -63,6 +65,7 @@ def test_get_battery_percent_parametrized(pm, mocker, percent, expected_percent)
     assert pm.get_battery_percent() == expected_percent
 
 
+@pytest.mark.unit
 def test_should_stop_processing_logic(pm, mocker):
     """
     GIVEN: Níveis de bateria críticos ou seguros
@@ -81,6 +84,7 @@ def test_should_stop_processing_logic(pm, mocker):
     assert pm.should_stop_processing() is True
 
 
+@pytest.mark.unit
 def test_get_process_resource_usage_error_handling(pm, mocker):
     """
     GIVEN: Falha ao acessar informações do processo (ex: permissão ou PID inexistente)
@@ -95,6 +99,7 @@ def test_get_process_resource_usage_error_handling(pm, mocker):
     assert mem == 0.0
 
 
+@pytest.mark.unit
 def test_get_system_discharge_rate_no_sys_fs(pm, mocker):
     """
     GIVEN: Sistema sem /sys/class/power_supply (ex: Windows, WSL, Docker)
@@ -105,6 +110,7 @@ def test_get_system_discharge_rate_no_sys_fs(pm, mocker):
     assert pm.get_system_discharge_rate() is None
 
 
+@pytest.mark.unit
 def test_get_system_discharge_rate_linux_success(pm, mocker):
     """
     GIVEN: Sistema Linux com bateria BAT0 reportando power_now
@@ -121,6 +127,7 @@ def test_get_system_discharge_rate_linux_success(pm, mocker):
     assert rate == 15.0
 
 
+@pytest.mark.unit
 def test_estimate_app_impact_cpu_zero(pm, mocker):
     """
     GIVEN: Sistema com CPU em repouso absoluto (0% uso total)
@@ -134,6 +141,7 @@ def test_estimate_app_impact_cpu_zero(pm, mocker):
     assert pm.estimate_app_impact() == 0.0
 
 
+@pytest.mark.unit
 def test_should_use_fallback_config_disabled(pm):
     """
     GIVEN: Recurso de economia de energia desabilitado na config

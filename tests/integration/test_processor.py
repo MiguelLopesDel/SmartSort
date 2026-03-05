@@ -24,6 +24,7 @@ def integration_env(tmp_path):
     return watch_dir, dest_dir, config
 
 
+@pytest.mark.integration
 def test_processor_integration_with_power_manager_fallback(integration_env, mocker):
     """
     INTEGRAÇÃO: FileProcessor + PowerManager
@@ -53,6 +54,7 @@ def test_processor_integration_with_power_manager_fallback(integration_env, mock
     assert mock_pipeline.call_count == 0
 
 
+@pytest.mark.integration
 def test_processor_integration_with_ai_enabled(integration_env, mocker):
     """
     INTEGRAÇÃO: FileProcessor + ZeroShot Classifier
@@ -83,6 +85,7 @@ def test_processor_integration_with_ai_enabled(integration_env, mocker):
     assert mock_pipe_instance.called
 
 
+@pytest.mark.integration
 def test_process_existing_files_integration(integration_env, mocker):
     """
     INTEGRAÇÃO: Varredura de arquivos existentes

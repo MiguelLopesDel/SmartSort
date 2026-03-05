@@ -49,6 +49,7 @@ def temp_config_env(tmp_path, mocker):
     return config_file
 
 
+@pytest.mark.e2e
 def test_cli_show_config_e2e(temp_config_env):
     """
     E2E: Garante que o comando 'show' lê e exibe a configuração real do disco.
@@ -59,6 +60,7 @@ def test_cli_show_config_e2e(temp_config_env):
     assert "zero_shot" in result.stdout
 
 
+@pytest.mark.e2e
 def test_cli_add_directory_e2e(temp_config_env, tmp_path):
     """
     E2E: Garante que o comando 'add' valida o diretório e persiste no disco.
@@ -74,6 +76,7 @@ def test_cli_add_directory_e2e(temp_config_env, tmp_path):
     assert str(watch_dir) in config["directories_to_watch"]
 
 
+@pytest.mark.e2e
 def test_cli_status_e2e(temp_config_env, mocker):
     """
     E2E: Garante que o comando 'status' exibe informações de hardware/bateria.
@@ -86,6 +89,7 @@ def test_cli_status_e2e(temp_config_env, mocker):
     assert "Status do Sistema" in result.stdout
 
 
+@pytest.mark.e2e
 def test_cli_accel_analysis_e2e(temp_config_env, mocker):
     """
     E2E: Garante que o comando 'accel' executa a análise de hardware.

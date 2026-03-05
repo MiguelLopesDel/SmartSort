@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from smartsort.cli.tui import SmartSortTUI
 
 
@@ -12,6 +14,7 @@ class TestUserInterface(unittest.TestCase):
             "directories_to_watch": ["/tmp"],
         }
 
+    @pytest.mark.e2e
     @patch("smartsort.cli.tui.load_config")
     @patch("smartsort.cli.tui.PowerManager")
     def test_tui_initialization_and_status(self, mock_pm, mock_load):
@@ -25,6 +28,7 @@ class TestUserInterface(unittest.TestCase):
             table = tui.draw_status_summary()
             self.assertIsNotNone(table)
 
+    @pytest.mark.e2e
     @patch("smartsort.cli.tui.load_config", return_value=None)
     @patch("smartsort.cli.tui.sys.exit")
     def test_tui_abort_on_config_error(self, mock_exit, mock_load):
