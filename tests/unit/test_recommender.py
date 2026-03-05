@@ -10,6 +10,7 @@ def recommender():
     return HardwareRecommender(config={})
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "cpu_brand, has_nvidia, on_battery, expected_provider, expected_device",
     [
@@ -39,6 +40,7 @@ def test_get_best_acceleration_parametrized(
     assert device == expected_device
 
 
+@pytest.mark.unit
 def test_show_analysis_output_content(recommender, mocker):
     """
     GIVEN: Um cenário de hardware específico
@@ -62,13 +64,44 @@ def test_show_analysis_output_content(recommender, mocker):
     assert "Priorizando eficiência" in all_logs
 
 
+@pytest.mark.unit
+def test_gpu_not_awakened_on_battery(recommender, mocker):
+    """
+    BUG REPRODUCTION:
+    GIVEN: O notebook está em modo bateria (on_battery=True)
+    WHEN: get_best_acceleration é chamado
+    THEN: _check_nvidia_gpu NÃO deve ser chamado, para evitar acordar a GPU dedicada.
+    """
+    mocker.patch("platform.processor", return_value="Intel Core i7")
+    spy = mocker.spy(recommender, "_check_nvidia_gpu")
+
+    recommender.get_best_acceleration(on_battery=True)
+
+    assert spy.call_count == 0, "ERRO: _check_nvidia_gpu foi chamado em modo bateria, acordando a GPU!"
+
+
+@pytest.mark.unit
+def test_gpu_awakened_on_ac(recommender, mocker):
+    """
+    GIVEN: O notebook está na tomada (on_battery=False)
+    WHEN: get_best_acceleration é chamado
+    THEN: _check_nvidia_gpu DEVE ser chamado para verificar disponibilidade de aceleração.
+    """
+    mocker.patch("platform.processor", return_value="Intel Core i7")
+    spy = mocker.spy(recommender, "_check_nvidia_gpu")
+
+    recommender.get_best_acceleration(on_battery=False)
+
+    assert spy.call_count == 1, "ERRO: _check_nvidia_gpu deveria ter sido chamado na tomada!"
+
+
+@pytest.mark.unit
 def test_check_nvidia_gpu_import_error(recommender, mocker):
     """
     GIVEN: Ambiente sem a biblioteca 'torch' instalada
     WHEN: _check_nvidia_gpu é chamado
     THEN: Deve retornar False graciosamente em vez de lançar exceção
     """
-
     mocker.patch("builtins.__import__", side_effect=ImportError)
 
     assert recommender._check_nvidia_gpu() is False

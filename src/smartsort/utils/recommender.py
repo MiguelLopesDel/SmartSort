@@ -15,13 +15,13 @@ class HardwareRecommender:
         Recomenda o melhor par (provider, device) baseado no hardware atual.
         """
         cpu_brand = platform.processor().lower()
-        has_nvidia = self._check_nvidia_gpu()
 
         if on_battery:
-
             if "intel" in cpu_brand or "amd" in cpu_brand:
                 return "openvino", "GPU" if "intel" in cpu_brand else "CPU"
             return "auto", "CPU"
+
+        has_nvidia = self._check_nvidia_gpu()
 
         if has_nvidia:
             return "cuda", "GPU"
@@ -32,7 +32,6 @@ class HardwareRecommender:
         return "auto", "CPU"
 
     def _check_nvidia_gpu(self) -> bool:
-
         try:
             import torch
 
@@ -42,13 +41,14 @@ class HardwareRecommender:
 
     def recommend_audio_config(self, on_battery: bool = False) -> Dict[str, Any]:
         """Sugere uma configuração de áudio baseada no hardware atual."""
-        has_nvidia = self._check_nvidia_gpu()
         total_ram_gb = psutil.virtual_memory().total / (1024**3)
 
         if on_battery:
             if total_ram_gb < 8:
                 return {"enabled": False, "model": "tiny", "use_gpu": False}
             return {"enabled": True, "model": "tiny", "use_gpu": False}
+
+        has_nvidia = self._check_nvidia_gpu()
 
         if has_nvidia:
             return {"enabled": True, "model": "base", "use_gpu": True}
