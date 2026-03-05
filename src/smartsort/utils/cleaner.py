@@ -8,14 +8,7 @@ from rich.console import Console
 console = Console()
 
 
-def remove_python_comments(filepath: str) -> None:
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            source = f.read()
-    except Exception as e:
-        console.print(f"[red]Erro ao ler {filepath}: {e}[/red]")
-        return
-
+def _get_python_comments(source: str, filepath: str) -> list:
     comments = []
     try:
         tokens = tokenize.tokenize(io.BytesIO(source.encode("utf-8")).readline)
@@ -26,28 +19,91 @@ def remove_python_comments(filepath: str) -> None:
         pass
     except Exception as e:
         console.print(f"[red]Erro ao processar tokens de Python {filepath}: {e}[/red]")
+    return comments
+
+
+def remove_python_comments(filepath: str) -> None:
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            source = f.read()
+    except Exception as e:
+        console.print(f"[red]Erro ao ler {filepath}: {e}[/red]")
         return
 
+    comments = _get_python_comments(source, filepath)
     if not comments:
         return
 
     lines = source.splitlines(keepends=True)
-
     for start, end in reversed(comments):
         s_row, s_col = start
         e_row, e_col = end
-        line_idx = s_row - 1
-        line = lines[line_idx]
-        lines[line_idx] = line[:s_col].rstrip() + line[e_col:]
-
-    final_content = "".join(lines)
+        idx = s_row - 1
+        lines[idx] = lines[idx][:s_col].rstrip() + lines[idx][e_col:]
 
     try:
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(final_content)
+            f.write("".join(lines))
         console.print(f"[green]INFO[/green]     Comentários removidos (Python): [blue]{filepath}[/blue]")
     except Exception as e:
         console.print(f"[red]Erro ao escrever Python {filepath}: {e}[/red]")
+
+
+class ShellParser:
+    def __init__(self, content: str):
+        self.content = content
+        self.result = []
+        self.in_sq = False
+        self.in_dq = False
+        self.escape = False
+        self.modified = False
+        self.i = 0
+
+    def parse(self) -> str:
+        while self.i < len(self.content):
+            char = self.content[self.i]
+            if self.escape:
+                self._handle_escape(char)
+            elif char == "\\":
+                self.escape = True
+                self.result.append(char)
+                self.i += 1
+            elif char == "'" and not self.in_dq:
+                self.in_sq = not self.in_sq
+                self.result.append(char)
+                self.i += 1
+            elif char == '"' and not self.in_sq:
+                self.in_dq = not self.in_dq
+                self.result.append(char)
+                self.i += 1
+            elif char == "#" and not self.in_sq and not self.in_dq:
+                if self._handle_hash():
+                    continue
+            else:
+                self.result.append(char)
+                self.i += 1
+        return "".join(self.result)
+
+    def _handle_escape(self, char: str) -> None:
+        self.result.append(char)
+        self.escape = False
+        self.i += 1
+
+    def _handle_hash(self) -> bool:
+        prev = self.content[self.i - 1] if self.i > 0 else " "
+        if prev.isspace() or prev in ";&|()":
+            if self.i == 0 and self.content.startswith("#!"):
+                return False
+            self.modified = True
+            pos = self.content.find("\n", self.i)
+            while self.result and self.result[-1] in (" ", "\t"):
+                self.result.pop()
+            if pos == -1:
+                self.i = len(self.content)
+            else:
+                self.i = pos
+            return True
+        return False
 
 
 def remove_shell_comments(filepath: str) -> None:
@@ -58,75 +114,34 @@ def remove_shell_comments(filepath: str) -> None:
         console.print(f"[red]Erro ao ler {filepath}: {e}[/red]")
         return
 
-    result = []
-    in_single_quote = False
-    in_double_quote = False
-    escape_next = False
+    parser = ShellParser(content)
+    final = parser.parse()
 
-    i = 0
-    modified = False
-    while i < len(content):
-        char = content[i]
-
-        if escape_next:
-            result.append(char)
-            escape_next = False
-            i += 1
-            continue
-
-        if char == "\\":
-            escape_next = True
-            result.append(char)
-            i += 1
-            continue
-
-        if char == "'" and not in_double_quote:
-            in_single_quote = not in_single_quote
-            result.append(char)
-            i += 1
-            continue
-
-        if char == '"' and not in_single_quote:
-            in_double_quote = not in_double_quote
-            result.append(char)
-            i += 1
-            continue
-
-        if char == "#" and not in_single_quote and not in_double_quote:
-            is_start_of_word = i == 0 or content[i - 1].isspace() or content[i - 1] in ";&|()"
-            if is_start_of_word:
-                if i == 0 and content.startswith("#!"):
-                    newline_pos = content.find("\n", i)
-                    if newline_pos == -1:
-                        result.append(content[i:])
-                        break
-                    else:
-                        result.append(content[i:newline_pos])
-                        i = newline_pos
-                        continue
-                else:
-                    modified = True
-                    newline_pos = content.find("\n", i)
-                    while len(result) > 0 and result[-1] in (" ", "\t"):
-                        result.pop()
-                    if newline_pos == -1:
-                        break
-                    else:
-                        i = newline_pos
-                        continue
-
-        result.append(char)
-        i += 1
-
-    if not modified:
+    if not parser.modified:
         return
 
     try:
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write("".join(result))
+            f.write(final)
         console.print(f"[green]INFO[/green]     Comentários removidos (Shell): [blue]{filepath}[/blue]")
     except Exception as e:
         console.print(f"[red]Erro ao escrever Shell {filepath}: {e}[/red]")
+
+
+def process_target(target: str) -> None:
+    if os.path.isfile(target):
+        if target.endswith(".py"):
+            remove_python_comments(target)
+        elif target.endswith(".sh"):
+            remove_shell_comments(target)
+    elif os.path.isdir(target):
+        for root, _, files in os.walk(target):
+            for file in files:
+                path = os.path.join(root, file)
+                if path.endswith(".py"):
+                    remove_python_comments(path)
+                elif path.endswith(".sh"):
+                    remove_shell_comments(path)
 
 
 def main() -> None:
@@ -134,21 +149,8 @@ def main() -> None:
         console.print("[yellow]Uso: python -m smartsort.utils.cleaner <arquivo_ou_diretorio>[/yellow]")
         sys.exit(1)
 
-    targets = sys.argv[1:]
-    for target in targets:
-        if os.path.isfile(target):
-            if target.endswith(".py"):
-                remove_python_comments(target)
-            elif target.endswith(".sh"):
-                remove_shell_comments(target)
-        elif os.path.isdir(target):
-            for root, _, files in os.walk(target):
-                for file in files:
-                    filepath = os.path.join(root, file)
-                    if filepath.endswith(".py"):
-                        remove_python_comments(filepath)
-                    elif filepath.endswith(".sh"):
-                        remove_shell_comments(filepath)
+    for target in sys.argv[1:]:
+        process_target(target)
 
 
 if __name__ == "__main__":

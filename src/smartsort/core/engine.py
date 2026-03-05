@@ -115,6 +115,14 @@ class FileProcessor:
             return
 
         mode = ai_config.get("mode")
+        provider, device = self._resolve_accel_settings(accel_config)
+
+        if mode == "local_ml":
+            self._load_local_ml_model(ai_config)
+        elif mode == "zero_shot":
+            self._load_zero_shot_model(ai_config, accel_config, provider, device)
+
+    def _resolve_accel_settings(self, accel_config: Dict[str, Any]) -> Tuple[str, str]:
         provider = accel_config.get("provider", "auto")
         device = accel_config.get("device", "auto")
 
@@ -123,54 +131,56 @@ class FileProcessor:
             provider, device = self.recommender.get_best_acceleration(on_battery)
             self._last_battery_state = on_battery
             self._last_provider = provider
+        return provider, device
 
-        if mode == "local_ml":
+    def _load_local_ml_model(self, ai_config: Dict[str, Any]) -> None:
+        self._unload_model("zero_shot_classifier")
+        path_rel = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
+        model_path = self.project_root / path_rel
+        try:
+            self.ml_model = joblib.load(str(model_path))
+            logger.info(f"Modelo Local ({model_path.name}) carregado.")
+        except Exception as e:
+            logger.warning(f"Erro ao carregar ML: {e}")
+
+    def _load_zero_shot_model(self, ai_config: Dict[str, Any], accel_config: Dict[str, Any], p: str, d: str) -> None:
+        self._unload_model("ml_model")
+        name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+        if name == self._current_model_name and p == self._current_mode:
+            return
+
+        try:
             self._unload_model("zero_shot_classifier")
-            model_path_rel = ai_config.get("local_ml_model_path", "models/modelo_classificador.joblib")
-            model_path = self.project_root / model_path_rel
-            try:
-                self.ml_model = joblib.load(str(model_path))
-                logger.info(f"Modelo Local ({model_path.name}) carregado.")
-            except Exception as e:
-                logger.warning(f"Erro ao carregar ML: {e}")
+            if accel_config.get("enabled") and p == "cuda":
+                logger.info(f"Carregando Zero-Shot para CUDA... ({name})")
+                self.zero_shot_classifier = pipeline("zero-shot-classification", model=name, device=0)
+            elif accel_config.get("enabled") and p == "openvino":
+                model, tokenizer = self._setup_openvino_model(name, d, accel_config)
+                self.zero_shot_classifier = pipeline("zero-shot-classification", model=model, tokenizer=tokenizer)
+            else:
+                self.zero_shot_classifier = pipeline("zero-shot-classification", model=name)
 
-        elif mode == "zero_shot":
-            self._unload_model("ml_model")
-            model_name = ai_config.get("zero_shot_model", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
-            if model_name == self._current_model_name and provider == self._current_mode:
-                return
+            self._current_model_name = name
+            self._current_mode = p
+        except Exception as e:
+            logger.exception(f"Erro ao carregar IA: {e}")
 
-            try:
-                self._unload_model("zero_shot_classifier")
-                if accel_config.get("enabled") and provider == "cuda":
-                    logger.info(f"Carregando Zero-Shot para CUDA... ({model_name})")
-                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name, device=0)
-                elif accel_config.get("enabled") and provider == "openvino":
-                    ov_cache_dir = self.project_root / "models" / "ov_cache" / model_name.replace("/", "_")
-                    from optimum.intel.openvino import OVModelForSequenceClassification
+    def _setup_openvino_model(self, name: str, d: str, cfg: Dict[str, Any]) -> Tuple[Any, Any]:
+        ov_cache_dir = self.project_root / "models" / "ov_cache" / name.replace("/", "_")
+        from optimum.intel.openvino import OVModelForSequenceClassification
 
-                    if ov_cache_dir.exists():
-                        model = OVModelForSequenceClassification.from_pretrained(
-                            str(ov_cache_dir), device=device.upper()
-                        )
-                    else:
-                        ov_cache_dir.mkdir(parents=True, exist_ok=True)
-                        model = OVModelForSequenceClassification.from_pretrained(
-                            model_name,
-                            export=True,
-                            device=device.upper(),
-                            load_in_8bit=(accel_config.get("quantization") == "int8"),
-                        )
-                        model.save_pretrained(str(ov_cache_dir))
-                    tokenizer = AutoTokenizer.from_pretrained(model_name)
-                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model, tokenizer=tokenizer)
-                else:
-                    self.zero_shot_classifier = pipeline("zero-shot-classification", model=model_name)
-
-                self._current_model_name = model_name
-                self._current_mode = provider
-            except Exception as e:
-                logger.exception(f"Erro ao carregar IA: {e}")
+        if ov_cache_dir.exists():
+            model = OVModelForSequenceClassification.from_pretrained(str(ov_cache_dir), device=d.upper())
+        else:
+            ov_cache_dir.mkdir(parents=True, exist_ok=True)
+            model = OVModelForSequenceClassification.from_pretrained(
+                name,
+                export=True,
+                device=d.upper(),
+                load_in_8bit=(cfg.get("quantization") == "int8"),
+            )
+            model.save_pretrained(str(ov_cache_dir))
+        return model, AutoTokenizer.from_pretrained(name)
 
     def sanitize_category(self, category_name: Any) -> str:
         if not category_name:
@@ -253,40 +263,47 @@ class FileProcessor:
     def classify_file(self, file_path: str, filename: str) -> Tuple[str, Optional[float]]:
         ext = Path(file_path).suffix.lower().lstrip(".")
         video_exts = ("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm")
-        text = ""
 
         if ext in video_exts and self.whisper_model:
             try:
                 res = self.whisper_model.transcribe(file_path)
-                text = res.get("text", "")
+                return str(res.get("text", "")), 1.0
             except Exception:
                 return self.fallback_rules.get(ext, "Videos"), 1.0
 
-        if not text and self.power_manager.should_use_fallback():
+        if self.power_manager.should_use_fallback():
             return self.fallback_rules.get(ext, "Outros"), None
 
-        if not text:
-            if ext == "pdf":
-                text = self.extract_text_from_pdf(file_path)
-            elif ext in ("jpg", "jpeg", "png"):
-                text = self.extract_text_from_image(file_path)
-            elif ext in ("txt", "md", "csv"):
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        text = f.read()
-                except Exception:
-                    pass
-
+        text = self._get_file_text(file_path, ext)
         ctx = f"{filename} {text[:500]}"
+
         if self.ai_config.get("enabled"):
-            mode = self.ai_config.get("mode")
+            return self._run_ai_inference(ctx, ext)
+
+        return str(self.fallback_rules.get(ext, "Outros")), None
+
+    def _get_file_text(self, path: str, ext: str) -> str:
+        if ext == "pdf":
+            return self.extract_text_from_pdf(path)
+        if ext in ("jpg", "jpeg", "png"):
+            return self.extract_text_from_image(path)
+        if ext in ("txt", "md", "csv"):
             try:
-                if mode == "local_ml" and self.ml_model:
-                    return str(self.ml_model.predict([ctx])[0]), None
-                if mode == "zero_shot" and self.zero_shot_classifier:
-                    cats = self.ai_config.get("categorias_disponiveis", ["Outros"])
-                    res = self.zero_shot_classifier(ctx, cats)
-                    return str(res["labels"][0]), float(res["scores"][0])
+                with open(path, "r", encoding="utf-8") as f:
+                    return f.read()
             except Exception:
                 pass
+        return ""
+
+    def _run_ai_inference(self, ctx: str, ext: str) -> Tuple[str, Optional[float]]:
+        mode = self.ai_config.get("mode")
+        try:
+            if mode == "local_ml" and self.ml_model:
+                return str(self.ml_model.predict([ctx])[0]), None
+            if mode == "zero_shot" and self.zero_shot_classifier:
+                cats = self.ai_config.get("categorias_disponiveis", ["Outros"])
+                res = self.zero_shot_classifier(ctx, cats)
+                return str(res["labels"][0]), float(res["scores"][0])
+        except Exception:
+            pass
         return str(self.fallback_rules.get(ext, "Outros")), None
