@@ -12,10 +12,11 @@ class PowerManager:
     def __init__(self, config: Any) -> None:
         self.config = config.get("power_saving", {}) if config else {}
         self.logger = logging.getLogger(__name__)
+        self.process: Optional[psutil.Process] = None
         try:
             self.process = psutil.Process(os.getpid())
         except Exception:
-            self.process = None
+            pass
 
         self.start_time = time.time()
         self.total_joules_consumed = 0.0
@@ -73,6 +74,8 @@ class PowerManager:
     def get_process_resource_usage(self) -> Tuple[float, float]:
         """Retorna o uso de CPU e Memória do processo atual."""
         try:
+            if self.process is None:
+                return 0.0, 0.0
             cpu_pct = self.process.cpu_percent(interval=0.1)
             memory_info = self.process.memory_info()
             memory_mb = memory_info.rss / (1024 * 1024)
