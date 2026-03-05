@@ -104,3 +104,4 @@ jobs:
       - name: Functional Docker Test
         run: |
           docker run --rm smartsort:test python3 -m smartsort.cli.config --help | grep "SmartSort"
+# nudge
