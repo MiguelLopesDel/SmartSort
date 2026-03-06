@@ -28,6 +28,7 @@ def video_config(tmp_path):
     }
 
 
+@pytest.mark.integration
 def test_video_with_audio_classification_integration(video_config, mocker):
     """
     INTEGRAÇÃO: Vídeo + Whisper + ZeroShot
@@ -62,6 +63,7 @@ def test_video_with_audio_classification_integration(video_config, mocker):
     assert mock_whisper.transcribe.called
 
 
+@pytest.mark.integration
 def test_video_fallback_when_whisper_fails_integration(video_config, mocker):
     """
     INTEGRAÇÃO: Vídeo + Whisper Falha
@@ -88,6 +90,7 @@ def test_video_fallback_when_whisper_fails_integration(video_config, mocker):
     assert expected.exists()
 
 
+@pytest.mark.unit
 def test_audio_config_recommendation_logic_unit(mocker):
     """
     UNITÁRIO: HardwareRecommender para Áudio

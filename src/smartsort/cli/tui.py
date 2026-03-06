@@ -84,41 +84,53 @@ class SmartSortTUI:
             menu_table.add_row("[bold yellow]0.[/bold yellow] 🚪 Sair")
 
             console.print(Panel(menu_table, title="Menu Principal", border_style="blue"))
-
             choice = IntPrompt.ask("Escolha uma opção", choices=["0", "1", "2", "3", "4", "5", "6"], default=0)
 
-            if choice == 1:
-                show_status()
-                Prompt.ask("\nPressione Enter para voltar")
-            elif choice == 2:
-                path = Prompt.ask("Digite o caminho completo da pasta")
-                if path:
-                    add_directory(path)
-                    new_config = load_config()
-                    if new_config:
-                        self.config = new_config
-                    time.sleep(1.5)
-            elif choice == 3:
-                model = Prompt.ask("Digite o nome do modelo (ex: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)")
-                if model:
-                    set_model(model)
-                    new_config = load_config()
-                    if new_config:
-                        self.config = new_config
-                    time.sleep(1.5)
-            elif choice == 4:
-                enabled = self.config["acceleration"].get("enabled", False)
-                self.config["acceleration"]["enabled"] = not enabled
-                save_config(self.config)
-                console.print(f"Aceleração {'[green]Ativada[/green]' if not enabled else '[red]Desativada[/red]'}")
-                time.sleep(1.5)
-            elif choice == 5:
-                self.audio_menu()
-            elif choice == 6:
-                self.show_logs()
-            elif choice == 0:
+            if choice == 0:
                 console.print("[yellow]Saindo do modo TUI...[/yellow]")
                 break
+            self._handle_menu_choice(choice)
+
+    def _handle_menu_choice(self, choice: int) -> None:
+        if choice == 1:
+            show_status()
+            Prompt.ask("\nPressione Enter para voltar")
+        elif choice == 2:
+            self._menu_add_directory()
+        elif choice == 3:
+            self._menu_set_model()
+        elif choice == 4:
+            self._menu_toggle_accel()
+        elif choice == 5:
+            self.audio_menu()
+        elif choice == 6:
+            self.show_logs()
+
+    def _menu_add_directory(self) -> None:
+        path = Prompt.ask("Digite o caminho completo da pasta")
+        if path:
+            add_directory(path)
+            new_cfg = load_config()
+            if new_cfg:
+                self.config = new_cfg
+            time.sleep(1.5)
+
+    def _menu_set_model(self) -> None:
+        model = Prompt.ask("Digite o nome do modelo (ex: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli)")
+        if model:
+            set_model(model)
+            new_cfg = load_config()
+            if new_cfg:
+                self.config = new_cfg
+            time.sleep(1.5)
+
+    def _menu_toggle_accel(self) -> None:
+        enabled = self.config["acceleration"].get("enabled", False)
+        self.config["acceleration"]["enabled"] = not enabled
+        save_config(self.config)
+        state = "[green]Ativada[/green]" if not enabled else "[red]Desativada[/red]"
+        console.print(f"Aceleração {state}")
+        time.sleep(1.5)
 
     def audio_menu(self) -> None:
         while True:

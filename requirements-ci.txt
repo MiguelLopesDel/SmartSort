@@ -15,14 +15,16 @@ rich
 pytest
 pytest-mock
 pytest-cov
-flake8
-black
-isort
+pytest-timeout
+flake8==7.0.0
+black==24.1.1
+isort==5.13.2
 mypy
 bandit
 safety
 types-PyYAML
 types-psutil
+pre-commit
 
 # Inteligência de Vídeo e Áudio para CI
 openai-whisper>=20230314

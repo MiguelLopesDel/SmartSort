@@ -1,3 +1,10 @@
-# Configuração para ignorar avisos aceitáveis sem usar comentários no código
+# Configuração Bandit para SmartSort
 skips:
-  - B615  # Revision pinning no HuggingFace (não aplicável para modelos configuráveis)
+  - B615
+
+exclude_dirs:
+  - tests
+  - venv
+  - .tmp
+  - models
+  - data

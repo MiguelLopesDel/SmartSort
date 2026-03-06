@@ -1,11 +1,13 @@
 import os
 
 import joblib
+import pytest
 from sklearn.pipeline import Pipeline
 
 from smartsort.core.trainer import treinar_modelo_local
 
 
+@pytest.mark.unit
 def test_treinar_modelo_local_success(tmp_path):
     """
     GIVEN: Um conjunto de dados de treino válido (texto, categoria)
@@ -37,6 +39,7 @@ def test_treinar_modelo_local_success(tmp_path):
     assert prediction == "Financas"
 
 
+@pytest.mark.unit
 def test_treinar_modelo_local_empty_data(tmp_path, mocker):
     """
     GIVEN: Uma lista vazia de dados de treino
@@ -53,6 +56,7 @@ def test_treinar_modelo_local_empty_data(tmp_path, mocker):
     assert "Nenhum dado de treino" in mock_logger.call_args[0][0]
 
 
+@pytest.mark.unit
 def test_treinar_modelo_local_creates_directory(tmp_path):
     """
     GIVEN: Um caminho de modelo em um diretório inexistente

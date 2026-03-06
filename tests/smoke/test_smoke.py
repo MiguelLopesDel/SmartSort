@@ -1,34 +1,30 @@
-import os
-import unittest
+from pathlib import Path
 
+import pytest
 import yaml
 
 from smartsort.core.engine import FileProcessor
 
 
-class TestSmoke(unittest.TestCase):
-    def test_real_config_validity(self):
+@pytest.mark.smoke
+def test_real_config_validity():
+    project_root = Path(__file__).resolve().parent.parent.parent
+    config_path = project_root / "config" / "config.yaml"
 
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        config_path = os.path.join(project_root, "config", "config.yaml")
-
-        self.assertTrue(os.path.exists(config_path))
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-            self.assertIsNotNone(config)
-            self.assertIn("ai_classification", config)
-
-    def test_processor_with_minimal_valid_config(self):
-
-        config = {
-            "directories_to_watch": [],
-            "destination_base_folder": "/tmp/sorted",
-            "ai_classification": {"enabled": False},
-            "power_saving": {"enabled": False},
-        }
-        processor = FileProcessor(config)
-        self.assertIsNotNone(processor)
+    assert config_path.exists()
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+        assert config is not None
+        assert "ai_classification" in config
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.smoke
+def test_processor_with_minimal_valid_config():
+    config = {
+        "directories_to_watch": [],
+        "destination_base_folder": "/tmp/sorted",
+        "ai_classification": {"enabled": False},
+        "power_saving": {"enabled": False},
+    }
+    processor = FileProcessor(config)
+    assert processor is not None

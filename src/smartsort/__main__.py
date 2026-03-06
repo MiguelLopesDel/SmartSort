@@ -47,65 +47,67 @@ def load_config(config_path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def setup_observer(observer: Any, handler: SmartSortHandler, cfg: Dict[str, Any]) -> None:
+    observer.unschedule_all()
+    directories = cfg.get("directories_to_watch", [])
+    for directory in directories:
+        dir_path = Path(directory)
+        if dir_path.exists():
+            observer.schedule(handler, str(dir_path), recursive=False)
+            logger.info(f"A monitorizar: [yellow]{dir_path}[/yellow]")
+        else:
+            logger.warning(f"O diretório [red]{dir_path}[/red] não existe.")
+
+
+def run_monitoring_loop(config_path: Path, processor: FileProcessor, observer: Any, handler: SmartSortHandler) -> None:
+    last_mtime = config_path.stat().st_mtime if config_path.exists() else 0.0
+    config_error_mode = False
+
+    while True:
+        time.sleep(5)
+        try:
+            if config_path.exists():
+                current_mtime = config_path.stat().st_mtime
+                if current_mtime > last_mtime or config_error_mode:
+                    new_cfg = load_config(config_path)
+                    if new_cfg:
+                        logger.info("Configuração atualizada/recuperada!")
+                        processor.update_config(new_cfg)
+                        setup_observer(observer, handler, new_cfg)
+                        last_mtime = current_mtime
+                        config_error_mode = False
+        except Exception:
+            if not config_error_mode:
+                logger.error("Arquivo de configuração ainda contém erros.")
+                config_error_mode = True
+
+
 def main() -> None:
     project_root = Path(__file__).resolve().parent.parent.parent
     config_path = project_root / "config" / "config.yaml"
-    config = load_config(config_path)
+    loaded_cfg = load_config(config_path)
 
-    config_error_mode = False
-    if config is None:
+    config_error_mode = loaded_cfg is None
+    config = loaded_cfg if loaded_cfg is not None else DEFAULT_CONFIG
+
+    if config_error_mode:
         logger.error("Falha na configuração inicial. Entrando em modo de espera.")
-        config = DEFAULT_CONFIG
-        config_error_mode = True
 
     processor = FileProcessor(config)
-
     if not config_error_mode:
         processor.process_existing_files()
 
     observer = Observer()
     handler = SmartSortHandler(processor)
 
-    def setup_observer(cfg: Dict[str, Any]) -> None:
-        observer.unschedule_all()
-        directories = cfg.get("directories_to_watch", [])
-        for directory in directories:
-            dir_path = Path(directory)
-            if dir_path.exists():
-                observer.schedule(handler, str(dir_path), recursive=False)
-                logger.info(f"A monitorizar: [yellow]{dir_path}[/yellow]")
-            else:
-                logger.warning(f"O diretório [red]{dir_path}[/red] não existe.")
-
     if not config_error_mode:
-        setup_observer(config)
+        setup_observer(observer, handler, config)
 
     observer.start()
     logger.info("[bold green]SmartSort em execução. Pressione Ctrl+C para parar.[/bold green]")
 
     try:
-        last_mtime = 0.0
-        if config_path.exists():
-            last_mtime = config_path.stat().st_mtime
-
-        while True:
-            time.sleep(5)
-            try:
-                if config_path.exists():
-                    current_mtime = config_path.stat().st_mtime
-                    if current_mtime > last_mtime or config_error_mode:
-                        new_config = load_config(config_path)
-                        if new_config:
-                            logger.info("Configuração atualizada/recuperada!")
-                            processor.update_config(new_config)
-                            setup_observer(new_config)
-                            last_mtime = current_mtime
-                            config_error_mode = False
-            except Exception:
-                if not config_error_mode:
-                    logger.error("Arquivo de configuração ainda contém erros.")
-                    config_error_mode = True
-
+        run_monitoring_loop(config_path, processor, observer, handler)
     except KeyboardInterrupt:
         observer.stop()
         logger.info("A parar SmartSort...")

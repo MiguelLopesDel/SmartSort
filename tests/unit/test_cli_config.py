@@ -28,6 +28,7 @@ def mock_config_file(tmp_path, mocker):
     return config_file, initial_config
 
 
+@pytest.mark.unit
 def test_load_config_success(mock_config_file):
     """
     GIVEN: Um arquivo de configuração válido no disco
@@ -39,6 +40,7 @@ def test_load_config_success(mock_config_file):
     assert "/home/user/downloads" in config["directories_to_watch"]
 
 
+@pytest.mark.unit
 def test_save_config_success(mock_config_file):
     """
     GIVEN: Uma nova configuração alterada
@@ -56,6 +58,7 @@ def test_save_config_success(mock_config_file):
     assert saved_config["acceleration"]["enabled"] is True
 
 
+@pytest.mark.unit
 def test_add_directory_new(mock_config_file, mocker):
     """
     GIVEN: Um diretório que ainda não está na lista de vigilância
@@ -75,6 +78,7 @@ def test_add_directory_new(mock_config_file, mocker):
     assert new_dir in saved_config["directories_to_watch"]
 
 
+@pytest.mark.unit
 def test_add_directory_already_exists(mock_config_file, mocker):
     """
     GIVEN: Um diretório que JÁ está na lista de vigilância
@@ -94,6 +98,7 @@ def test_add_directory_already_exists(mock_config_file, mocker):
     assert "já está sendo vigiado" in mock_logger.call_args[0][0]
 
 
+@pytest.mark.unit
 def test_set_model_updates_mode(mock_config_file):
     """
     GIVEN: Um novo nome de modelo
