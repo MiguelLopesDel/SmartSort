@@ -267,7 +267,10 @@ class FileProcessor:
         if ext in video_exts and self.whisper_model:
             try:
                 res = self.whisper_model.transcribe(file_path)
-                return str(res.get("text", "")), 1.0
+                text = str(res.get("text", ""))
+                if self.ai_config.get("enabled") and text:
+                    return self._run_ai_inference(f"{filename} {text}", ext)
+                return self.fallback_rules.get(ext, "Videos"), 1.0
             except Exception:
                 return self.fallback_rules.get(ext, "Videos"), 1.0
 

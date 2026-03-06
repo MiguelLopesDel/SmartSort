@@ -52,7 +52,7 @@ def remove_python_comments(filepath: str) -> None:
 class ShellParser:
     def __init__(self, content: str):
         self.content = content
-        self.result = []
+        self.result: list[str] = []
         self.in_sq = False
         self.in_dq = False
         self.escape = False
@@ -77,8 +77,9 @@ class ShellParser:
                 self.result.append(char)
                 self.i += 1
             elif char == "#" and not self.in_sq and not self.in_dq:
-                if self._handle_hash():
-                    continue
+                if not self._handle_hash():
+                    self.result.append(char)
+                    self.i += 1
             else:
                 self.result.append(char)
                 self.i += 1

@@ -47,7 +47,7 @@ def load_config(config_path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
-def setup_observer(observer: Observer, handler: SmartSortHandler, cfg: Dict[str, Any]) -> None:
+def setup_observer(observer: Any, handler: SmartSortHandler, cfg: Dict[str, Any]) -> None:
     observer.unschedule_all()
     directories = cfg.get("directories_to_watch", [])
     for directory in directories:
@@ -59,9 +59,7 @@ def setup_observer(observer: Observer, handler: SmartSortHandler, cfg: Dict[str,
             logger.warning(f"O diretório [red]{dir_path}[/red] não existe.")
 
 
-def run_monitoring_loop(
-    config_path: Path, processor: FileProcessor, observer: Observer, handler: SmartSortHandler
-) -> None:
+def run_monitoring_loop(config_path: Path, processor: FileProcessor, observer: Any, handler: SmartSortHandler) -> None:
     last_mtime = config_path.stat().st_mtime if config_path.exists() else 0.0
     config_error_mode = False
 
@@ -87,12 +85,13 @@ def run_monitoring_loop(
 def main() -> None:
     project_root = Path(__file__).resolve().parent.parent.parent
     config_path = project_root / "config" / "config.yaml"
-    config = load_config(config_path)
+    loaded_cfg = load_config(config_path)
 
-    config_error_mode = config is None
+    config_error_mode = loaded_cfg is None
+    config = loaded_cfg if loaded_cfg is not None else DEFAULT_CONFIG
+
     if config_error_mode:
         logger.error("Falha na configuração inicial. Entrando em modo de espera.")
-        config = DEFAULT_CONFIG
 
     processor = FileProcessor(config)
     if not config_error_mode:
